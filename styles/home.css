@@ -1,0 +1,83 @@
+
+.oranienbaum-regular {
+  font-family: "Oranienbaum", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+
+.nunito {
+  font-family: "Nunito", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+    font-family: "William Narasi";
+    src: url("/fonts/William\ Narasi.ttf");
+}
+
+@font-face {
+    font-family: "Priestacy";
+    src: url("/fonts/Priestacy.otf");
+}
+
+@font-face {
+    font-family: "Charlotte";
+    src: url("/fonts/Charlotte.otf");
+}
+
+@font-face {
+    font-family: "Adelia";
+    src: url("/fonts/adelia_3/adelia.otf");
+}
+
+@font-face {
+    font-family: "Andrea Bilarosa";
+    src: url("/fonts/andrea_bilarosa/Andrea\ Bellarosa.ttf");
+}
+
+@font-face {
+    font-family: "Cherolina";
+    src: url("/fonts/cherolina/Cherolina.otf");
+}
+
+
+h1 {
+    font-family: "William Narasi";  
+    font-size: 5rem!;
+}
+
+.nav-button {
+    font-family: "Nunito", sans-serif;
+    font-weight: 200;
+    font-size: small;
+    font-style: normal;
+}
+
+.main-img {
+    filter: blur(1.5px);
+}
+
+.img-text {
+    position: absolute;
+    font-family: "Cherolina", cursive;
+    z-index: 1;
+    color: white;
+    font-size: 20vw;
+    filter: drop-shadow(2px 2px 1px #ffffff);
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}
+
+.img-container {
+    position: relative;
+}
+
+
+
