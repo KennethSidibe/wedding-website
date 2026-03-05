@@ -1,0 +1,131 @@
+@font-face {
+    font-family: "William Narasi";
+    src: url("/fonts/William\ Narasi.ttf");
+}
+
+.oranienbaum-regular {
+  font-family: "Oranienbaum", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+
+
+.nunito {
+  font-family: "Nunito", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+    font-family: "William Narasi";
+    src: url("/fonts/William\ Narasi.ttf");
+}
+
+@font-face {
+    font-family: "Priestacy";
+    src: url("/fonts/Priestacy.otf");
+}
+
+@font-face {
+    font-family: "Charlotte";
+    src: url("/fonts/Charlotte.otf");
+}
+
+@font-face {
+    font-family: "Adelia";
+    src: url("/fonts/adelia_3/adelia.otf");
+}
+
+@font-face {
+    font-family: "Andrea Bilarosa";
+    src: url("/fonts/andrea_bilarosa/Andrea\ Bellarosa.ttf");
+}
+
+@font-face {
+    font-family: "Cherolina";
+    src: url("/fonts/cherolina/Cherolina.otf");
+}
+
+h1 {
+    font-family: "William Narasi";  
+    font-size: 5rem!;
+}
+
+h2 {
+    font-family: "William Narasi";
+}
+
+h2.double-word {
+    font-size: calc(1.3rem + 4.5vw);
+
+    @media (min-width:1200px) {
+        font-size: calc(1rem + 4.5vw);
+    }
+}
+
+.form-img {
+    background-image: url("/img/couple-4.JPG");
+    background-size: cover;
+    background-position: center;
+    margin: 0;
+    padding: 0;
+}
+
+.form-style {
+    padding: 3rem;
+    
+    @media (width > 1200px) {
+        width: 50%;
+    }
+}
+
+form label {
+    font-family: "Oranienbaum", cursive;
+    font-size: larger;
+}
+
+.g-form {
+    @media (width < 800px) {
+        margin-bottom: 5rem;    
+    }
+    
+    @media (width > 800px) {
+        height: 80vh;
+    }
+}
+
+footer {
+    background-image: url("/img/couple-1.JPG");
+    background-size: 250%;
+    @media (width > 800px) {
+        background-size: cover;
+    }
+    background-position: center;
+}
+
+footer p {
+    color: white;
+    filter: drop-shadow(0.2rem 0.2rem 0.15rem black);
+}
+
+footer .nav-link {
+    color: rgb(233, 133, 133);
+    
+}
+
+footer .nav-link:hover {
+    color: rgb(254, 2, 2);
+}
+
+footer .nav-link:focus {
+    color: rgb(254, 2, 2);
+}
+
+
+
+footer .text {
+    font-family: "William Narasi", cursive;
+    font-size: calc(1.5rem + 2vw);
+}
