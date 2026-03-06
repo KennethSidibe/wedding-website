@@ -54,7 +54,7 @@ h1 {
 }
 
 h2 {
-    font-family: "William Narasi";
+    font-family: "Pinyon Script", cursive;
 }
 
 h2.double-word {
@@ -81,6 +81,15 @@ h2.double-word {
     }
 }
 
+a {
+    color: black;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
 form label {
     font-family: "Oranienbaum", cursive;
     font-size: larger;
@@ -90,29 +99,47 @@ form label {
     @media (width < 800px) {
         margin-bottom: 5rem;    
     }
+   
     
-    @media (width > 800px) {
+    /* @media (width > 800px) {
         height: 80vh;
-    }
+    } */
+}
+
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+   
 }
 
 footer {
+
+    
+    width: 100%;
     background-image: url("/img/couple-1.JPG");
     background-size: 250%;
     @media (width > 800px) {
         background-size: cover;
     }
     background-position: center;
+
+    @media (width>1023px) {
+        margin-top: 4rem;
+    }
 }
 
 footer p {
-    color: white;
+    color: rgb(255, 255, 255);
     filter: drop-shadow(0.2rem 0.2rem 0.15rem black);
 }
 
+
 footer .nav-link {
     color: rgb(233, 133, 133);
-    
+    font-family: "EB Garamond", serif;
 }
 
 footer .nav-link:hover {

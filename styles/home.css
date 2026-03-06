@@ -1,5 +1,5 @@
 
-html, body,footer {
+html,body,footer {
     max-width: 100%;
     overflow-x: clip;
 }
@@ -10,7 +10,18 @@ html, body,footer {
   font-style: normal;
 }
 
+.eb-garamond {
+  font-family: "EB Garamond", serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
 
+.pinyon-script {
+  font-family: "Pinyon Script", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
 
 .nunito {
   font-family: "Nunito", sans-serif;
@@ -49,10 +60,45 @@ html, body,footer {
     src: url("/fonts/cherolina/Cherolina.otf");
 }
 
+a {
+    color: black;
+    text-decoration: none;
+}
 
 h1 {
     font-family: "William Narasi";  
     font-size: 5rem!;
+}
+
+h2 {
+    font-family: "Pinyon Script", cursive;
+    font-weight: 400;
+    font-style: normal;
+}
+
+h2.single-word {
+    
+    font-size: calc(1.5rem + 4.5vw);
+    /* 
+    1920*1080 -> large desktop
+    1728 * 1085 -> laptop
+    1440px * 900px -> mac
+    820 * 1180 -> ipad
+    390 * 844 px -> iPhone 12 pro
+    
+    */
+}
+
+h2.double-word {
+    font-size: calc(1.3rem + 4.5vw);
+
+    @media (min-width:1200px) {
+        font-size: calc(1rem + 4.5vw);
+    }
+}
+
+h4 {
+    font-family: "EB Garamond", serif;
 }
 
 .img-gift {
@@ -138,7 +184,11 @@ h1 {
 }
 
 p {
-    font-size: large;
+    font-size: calc(1rem + 0.35vw);
+    @media (width > 1800px) {
+        font-size: calc(1rem + 0.4vw);
+    }
+    font-family: "EB Garamond", serif;
 }
 
 .border-v::before {
@@ -395,34 +445,12 @@ p {
     transform: translateX(-55%);
 }
 
-h2 {
-    font-family: "William Narasi";
-}
 
-h2.single-word {
-    
-    font-size: calc(1.5rem + 4.5vw);
-    /* 
-    1920*1080 -> large desktop
-    1728 * 1085 -> laptop
-    1440px * 900px -> mac
-    820 * 1180 -> ipad
-    390 * 844 px -> iPhone 12 pro
-    
-    */
-}
-
-h2.double-word {
-    font-size: calc(1.3rem + 4.5vw);
-
-    @media (min-width:1200px) {
-        font-size: calc(1rem + 4.5vw);
-    }
-}
 
 .nav-button {
-    font-family: "Nunito", sans-serif;
-    font-weight: 300;
+    font-family: "EB Garamond", serif;
+    font-weight: 200;
+    font-size: large;
     
     font-style: normal;
 }
@@ -430,6 +458,7 @@ h2.double-word {
 
 
 footer {
+    width: 100%;
     background-image: url("/img/couple-1.JPG");
     background-size: 250%;
     @media (width > 800px) {
@@ -445,7 +474,7 @@ footer p {
 
 footer .nav-link {
     color: rgb(233, 133, 133);
-    
+    font-family: "EB Garamond", serif;
 }
 
 footer .nav-link:hover {
