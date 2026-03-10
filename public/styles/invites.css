@@ -6,8 +6,6 @@
   font-style: normal;
 }
 
-
-
 .nunito {
   font-family: "Nunito", sans-serif;
   font-optical-sizing: auto;
@@ -17,32 +15,12 @@
 
 @font-face {
     font-family: "William Narasi";
-    src: url("./fonts/William-Narasi.ttf");
-}
-
-@font-face {
-    font-family: "Priestacy";
-    src: url("/fonts/Priestacy.otf");
-}
-
-@font-face {
-    font-family: "Charlotte";
-    src: url("/fonts/Charlotte.otf");
-}
-
-@font-face {
-    font-family: "Adelia";
-    src: url("/fonts/adelia_3/adelia.otf");
-}
-
-@font-face {
-    font-family: "Andrea Bilarosa";
-    src: url("/fonts/andrea_bilarosa/Andrea\ Bellarosa.ttf");
+    src: url("./fonts/WilliamNarasi.ttf");
 }
 
 @font-face {
     font-family: "Cherolina";
-    src: url("/fonts/cherolina/Cherolina.otf");
+    src: url("./fonts/cherolina/Cherolina.otf");
 }
 
 h1 {
