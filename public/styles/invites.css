@@ -48,10 +48,14 @@
     src: url("/fonts/cherolina/Cherolina.otf");
 }
 
+
+
 h1 {
     font-family: "William Narasi";  
     font-size: 5rem!;
 }
+
+
 
 h2 {
     font-family: "Pinyon Script", cursive;
@@ -81,6 +85,16 @@ h2.double-word {
     }
 }
 
+.form-text.error  {
+    color: white;
+    filter: drop-shadow(1px 1px 1px black);
+}
+
+#email-label {
+    color: white;
+    
+}
+
 a {
     color: black;
     text-decoration: none;
@@ -89,6 +103,14 @@ a {
 a:hover {
     text-decoration: underline;
 }
+
+a:active:has(h1),
+a:focus:has(h1),
+a:hover:has(h1)
+{
+    text-decoration: none;
+}
+
 
 form label {
     font-family: "Oranienbaum", cursive;
