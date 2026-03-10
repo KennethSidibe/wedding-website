@@ -31,15 +31,14 @@ html,body,footer {
 }
 
 @font-face {
-    font-family: "William Narasi";
-    src: url("./fonts/WilliamNarasi.ttf");
+    font-family: "WilliamNarasi";
+    src: url("/fonts/WilliamNarasi.ttf");
 }
-
 
 
 @font-face {
     font-family: "Cherolina";
-    src: url("./fonts/cherolina/Cherolina.otf");
+    src: url("/fonts/cherolina/Cherolina.otf");
 }
 
 a {
@@ -55,8 +54,8 @@ a:hover:has(h1)
 }
 
 h1 {
-    font-family: "William Narasi";  
-    font-size: 5rem!;
+    font-family: "WilliamNarasi", cursive;  
+    font-size: 5rem;
 }
 
 h2 {
@@ -477,7 +476,7 @@ footer .nav-link:focus {
 
 
 footer .text {
-    font-family: "William Narasi", cursive;
+    font-family: "WilliamNarasi", cursive;
     font-size: calc(1.5rem + 2vw);
 }
 

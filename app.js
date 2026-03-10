@@ -1,4 +1,5 @@
 import bodyParser from "body-parser";
+import { log } from "console";
 import express from "express";
 const app = express();
 const port = 3000;
@@ -17,6 +18,8 @@ app.use(express.static(__dirName + "/public"));
 // Routes
 app.listen(port, () => {
   console.log(`Server running on port ${port}.`);
+  console.log("Test Log online");
+  
 });
 
 
@@ -32,6 +35,6 @@ app.get('/invites', (req, res) => {
 
 app.post('/invitees', (req, res) => {
   console.log(req.body);
-  
+
   res.send('<h1>Thank you for registering</h1>');
 });
