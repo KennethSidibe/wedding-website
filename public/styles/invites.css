@@ -14,8 +14,8 @@
 }
 
 @font-face {
-    font-family: "William Narasi";
-    src: url("./fonts/WilliamNarasi.ttf");
+    font-family: "WilliamNarasi";
+    src: url("/fonts/WilliamNarasi.ttf");
 }
 
 @font-face {
@@ -24,7 +24,7 @@
 }
 
 h1 {
-    font-family: "William Narasi";  
+    font-family: "WilliamNarasi";  
     font-size: 5rem!;
 }
 
@@ -148,6 +148,6 @@ footer .nav-link:focus {
 
 
 footer .text {
-    font-family: "William Narasi", cursive;
+    font-family: "WilliamNarasi", cursive;
     font-size: calc(1.5rem + 2vw);
 }
