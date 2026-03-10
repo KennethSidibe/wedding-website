@@ -32,6 +32,6 @@ app.get('/invites', (req, res) => {
 
 app.post('/invitees', (req, res) => {
   console.log(req.body);
-
+  
   res.send('<h1>Thank you for registering</h1>');
 });

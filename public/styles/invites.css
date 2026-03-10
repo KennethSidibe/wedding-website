@@ -1,7 +1,4 @@
-@font-face {
-    font-family: "William Narasi";
-    src: url("/fonts/William\ Narasi.ttf");
-}
+
 
 .oranienbaum-regular {
   font-family: "Oranienbaum", serif;
@@ -20,7 +17,7 @@
 
 @font-face {
     font-family: "William Narasi";
-    src: url("/fonts/William\ Narasi.ttf");
+    src: url("/fonts/William-Narasi.ttf");
 }
 
 @font-face {
@@ -47,8 +44,6 @@
     font-family: "Cherolina";
     src: url("/fonts/cherolina/Cherolina.otf");
 }
-
-
 
 h1 {
     font-family: "William Narasi";  
