@@ -1,10 +1,18 @@
 import dotenv  from "dotenv";
 import path,{ resolve } from "path";
 import mysql from "mysql2/promise";
+import nodemailer from "nodemailer";
 
 const configFilePath = path.resolve('./config/.env');
 
-dotenv.config({path:configFilePath,  quiet: true});
+const configFilePatFromModule = path.resolve('../config/.env');
+
+
+dotenv.config({path:configFilePatFromModule,  quiet: true});
+
+// console.log(`ENV check usr : ${process.env.NODEMAILER_USR}`);
+// console.log(`ENV check pwd exists : ${!!process.env.NODEMAILER_PWD}`);
+
 
 const pool = mysql.createPool({
     host: process.env.MYSQL_HOST,
@@ -13,5 +21,18 @@ const pool = mysql.createPool({
     database: process.env.MYSQL_WEDDING_DB,
 });
 
+const transporter = nodemailer.createTransport({
+    host: 'smtp.gmail.com',
+    port : 465,
+    secure : true,
+    auth : {
+        user: process.env.NODEMAILER_USR,
+        pass : process.env.NODEMAILER_PWD
+    }
+});
 
-export default pool;
+
+export {
+    pool,
+    transporter
+};
