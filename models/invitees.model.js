@@ -2,7 +2,7 @@ import pool from "../database/connection.js";
 import { generateUsername, generateFromEmail } from "unique-username-generator";
 import { TEST_TABLE_NAME, PROD_TABLE_NAME } from "./queries/invitees.queries.js";
 
-const TABLE_NAME = PROD_TABLE_NAME;
+const TABLE_NAME = TEST_TABLE_NAME;
 
 async function getInvitees() {
     const query = `SELECT * FROM ${TABLE_NAME} limit 100`;
