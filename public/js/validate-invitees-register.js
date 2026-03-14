@@ -1,5 +1,15 @@
 import * as CONST from "./form-constants.js";
 
+let getParams = new URLSearchParams(window.location.search);
+if(getParams.has('error') && getParams.get('error') === 'emailExists') {
+    $('#emailErrorMsg').removeClass('hide');
+    setTimeout(() => {
+        $('#emailErrorMsg').fadeOut("slow");
+    }, 2000);
+} else {
+    
+}
+
 $(`#${CONST.SUBMIT_BUTTON_ID}`).on('click', () => {
     $(`#${CONST.FORM_ID}`).trigger('submit');
 });
@@ -47,8 +57,6 @@ $(`#${CONST.FORM_ID}`).on('submit', function(event) {
         hideError(emailErrorId);
         return true;
     }
-
-    // filter: drop-shadow(1px 1px 1px black);
 
 function hasValue(input, errorMessage, errorElementId, inputId) {
     if (input.trim() === "") {
