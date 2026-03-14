@@ -45,7 +45,7 @@
         </div>
         <div class="row w-75 mx-auto align-items-center mb-3">
           <div class="col nav-button">
-            <a href="/invites">
+            <a href="/invitees">
               Invités
               <svg
                 xmlns="http://www.w3.org/2000/svg"
@@ -107,11 +107,16 @@
             <h2 class="double-word">Inscription des Invités</h2>
           </div>
         </div>
+        <div class="container">
+          
+        </div>
       </div>
       <div
         class="container form-img d-flex justify-content-center align-items-center flex-column px-3 form-style"
       >
-        <form id="inviteesRegisterForm" method="post" action="/invitees">
+
+      <div id="emailErrorMsg" class="row text-center mb-4 hide">Email already exists, Retry</div>
+        <form id="inviteesRegisterForm" method="post" action="/invitee">
           <div class="mb-3 nom">
             <label for="lastNameInput" class="form-label">Nom</label>
             <input
