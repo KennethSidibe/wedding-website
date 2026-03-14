@@ -5,10 +5,9 @@ import nodemailer from "nodemailer";
 
 const configFilePath = path.resolve('./config/.env');
 
-const configFilePatFromModule = path.resolve('../config/.env');
+const configFilePahFromModule = path.resolve('../config/.env');
 
-
-dotenv.config({path:configFilePatFromModule,  quiet: true});
+dotenv.config({path:configFilePath,  quiet: true});
 
 // console.log(`ENV check usr : ${process.env.NODEMAILER_USR}`);
 // console.log(`ENV check pwd exists : ${!!process.env.NODEMAILER_PWD}`);
