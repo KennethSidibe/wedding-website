@@ -21,12 +21,7 @@ async function createNewInvitee(formBody) {
         }
         throw new Error('Form data is wrong or nonexistant');
     }catch (error){
-        if(error.code === 'ER_DUP_ENTRY') {
-            throw error;
-        }
-        else {
-            return null;
-        }
+        throw error;
     }
 
 }
