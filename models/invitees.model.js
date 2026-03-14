@@ -1,4 +1,4 @@
-import pool from "../database/connection.js";
+import { pool } from "../database/connection.js";
 import { generateUsername, generateFromEmail } from "unique-username-generator";
 import { TEST_TABLE_NAME, PROD_TABLE_NAME } from "./queries/invitees.queries.js";
 
