@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "node --no-warnings --experimental-vm-modules node_modules/jest/bin/jest.js"
   },
   "type": "module",
   "author": "",
@@ -12,6 +12,7 @@
   "dependencies": {
     "@types/jquery": "^4.0.0",
     "body-parser": "^2.2.2",
+    "deep-email-validator": "^0.1.21",
     "dotenv": "^17.3.1",
     "ejs": "^5.0.1",
     "express": "^5.2.1",
@@ -23,5 +24,9 @@
     "include": [
       "jquery"
     ]
+  },
+  "devDependencies": {
+    "@types/jest": "^30.0.0",
+    "jest": "^30.3.0"
   }
 }
