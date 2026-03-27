@@ -12,9 +12,6 @@ const emailBody = `
 
 <body style="margin:0; padding:0; background-color:#f4f4f4; width:100%;">
   <!-- Preheader text -->
-  <span style="display:none; font-size:1px; color:#f4f4f4; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden;">
-      Merci de t'être enregistré.
-    </span>
 
   <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%"
     style="border-collapse:collapse; background-color:#f4f4f4; margin:0; padding:0; width:100%;">
