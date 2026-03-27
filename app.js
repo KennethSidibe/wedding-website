@@ -76,13 +76,16 @@ app.post('/invitee', async(req, res) => {
 
     res.redirect('/');
   }catch (error) {
-    //console.log(`errorcode: ${error.code}`);
     if(error.code === 'ER_DUP_ENTRY') {
+      console.error(error);
       return res.redirect(303, '/invitees?error=emailExists');
     } else {
       console.error(error);
-      
       res.redirect('/?error=error');
     }
   }
+});
+
+app.get(('/give'), (req, res) => {
+  res.render('give.ejs');
 });
