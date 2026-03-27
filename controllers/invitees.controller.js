@@ -1,6 +1,7 @@
 import { generateUsername } from "unique-username-generator";
 import { getInvitee, getInvitees, createInvitee } from "../models/invitees.model.js";
 import { isArrEmpty, isObjEmpty } from "../models/invitees.model.js";
+import {validate} from "deep-email-validator";
 
 
 async function createNewInvitee(formBody) {
@@ -42,7 +43,6 @@ async function retrieveInvitee(data) {
 }
 
 
-
 async function retrieveAllInvitees() {
     try {
         const invitees = await getInvitees();
@@ -56,7 +56,7 @@ async function retrieveAllInvitees() {
 }
 
 function dataSelectInviteeValid(data) {
-    if(data.id === null) {
+    if(data.id === null || data.id === undefined) {
         //console.log('null/undefined');
         return false;
     }
@@ -68,7 +68,7 @@ function dataSelectInviteeValid(data) {
         //console.log('No id Field');
         return false; 
     }
-    if(isNaN(data.id)) {
+    if(!(Number.isInteger(data.id))) {
         //console.log('NaN');
         return false;
     }
@@ -79,12 +79,12 @@ function dataSelectInviteeValid(data) {
     return true
 }
 
-function dataCreateInviteeValid(data) {
+async function dataCreateInviteeValid(data) {
 
     if(data.firstName === null || 
         data.lastName === null || 
         data.email === null) {
-            console.log('test1');
+            // console.log('test1');
             
         return false;
     }
@@ -96,7 +96,7 @@ function dataCreateInviteeValid(data) {
             !data.hasOwnProperty('lastName') ||
             !data.hasOwnProperty('email')
     ) {
-        console.log('test2');
+        // console.log('test2');
         
             return false;
     }
@@ -105,7 +105,7 @@ function dataCreateInviteeValid(data) {
         !typeof data.lastName === 'string' ||
         !typeof data.email === 'string'
     ) {
-       console.log('test3');
+       // console.log('test3');
         
         return false;
     }
@@ -116,16 +116,26 @@ function dataCreateInviteeValid(data) {
     !data.email.length > 0
     )
         {
-            console.log('test4');
+            // console.log('test4');
                
             return false
         }
+    const emailValid = await validate(data.email);
+    if(!emailValid.valid) {
+        // console.log('test 5');
+        
+        return false;
+    } 
     
     return true;
 }
 
+
+
 export {
     createNewInvitee,
     retrieveAllInvitees,
-    retrieveInvitee
+    retrieveInvitee,
+    dataCreateInviteeValid,
+    dataSelectInviteeValid
 }
