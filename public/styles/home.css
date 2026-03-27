@@ -94,8 +94,8 @@ h4 {
 }
 
 .bg-img {
-    background-image: url("/img/photographer.jpg");
     background-size: cover;
+    background-position: center;
     border-radius: 25px;
     min-height: 300px;
     @media (min-width:800px) {
@@ -114,6 +114,30 @@ h4 {
     background-color: white;
     border-radius: 20px;
     filter: drop-shadow(3px 3px 4px #00000068);
+}
+
+.photo {
+    background-image: url("/img/photographer.jpg");
+}
+
+.video {
+    background-image: url('/img/videographe.jpg');
+}
+
+.piece-img {
+    background-image: url('/img/piece.jpg');
+}
+
+.drink {
+    background-image: url('/img/Champagne.jpg');
+}
+
+.food {
+    background-image: url('/img/buffet.jpg');
+}
+
+.planner {
+    background-image: url('/img/planner.jpg');
 }
 
 .anchor {
@@ -292,7 +316,7 @@ p {
 
 .give-btn {
     font-size: calc(1rem + 0.5vw);
-    border-radius: 2rem;
+    border-radius: 0.5rem;
     padding-inline: 4rem;
 }
 
@@ -504,23 +528,6 @@ footer .text {
     
 }
 
-.img-text {
-    position: absolute;
-    font-family: "Cherolina", cursive;
-    z-index: 1;
-    color: white;
-    font-size: 20vw;
-    filter: drop-shadow(2px 2px 1px #ffffff);
-    @media (min-width: 800px) {
-        filter: drop-shadow(5px 5px 2px #ffffff);
-    }
-    top: 50%;
-    left: 50%;
-    width: 100vw;
-    text-align: center;
-    transform: translate(-50%, -50%);
-}
-
 .price {
     font-family: "JetBrains Mono", monospace;
     font-optical-sizing: auto;
@@ -539,6 +546,106 @@ footer .text {
 
 .img-container {
     position: relative;
+}
+
+.img-text {
+    position: absolute;
+    font-family: "EB Garamond", serif;
+    z-index: 1;
+    color: white;
+    font-size: 10vw;
+    filter: drop-shadow(2px 2px 1px #ffffff);
+    @media (min-width: 800px) {
+        filter: drop-shadow(5px 5px 2px #ffffff);
+    }
+    top: 50%;
+    left: 50%;
+    width: 100vw;
+    text-align: center;
+    transform: translate(-50%, -50%);
+}
+
+.dates-row {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    color: white;
+}
+
+.dates-row h1, .dates-row h2 {
+    filter: drop-shadow(8px 6px 0px black);
+}
+
+.dates-border.right {
+    height: 100%;
+    width: 100%;
+    position:absolute; 
+    z-index:2;
+    top: 0;
+    right: 0;
+    transform: translate(40%, -20%);
+}
+.dates-border.left {
+    height: 100%;
+    width: 100%;
+    position:absolute; 
+    z-index:3;
+    top: 0;
+    right: 0;
+    
+    transform: translate(-40%, 10%);
+    @media (width < 500px) {
+        transform: translate(-40%, 10%);;
+    }
+}
+
+.dates-border {
+    stroke:#ff1100;
+    stroke-width:0.5px;
+    fill:none;
+    stroke-linejoin:miter;
+}
+
+.dates-row h1 {
+
+    @media (width < 500px) {
+        font-size: 1.5em;    
+        filter: drop-shadow(2px 3px 0px black);
+    }
+    @media (width> 501px) and (width < 900px) {
+        font-size: 3em;    
+        filter: drop-shadow(8px 5px 0px black);
+    }
+    
+}
+.dates-row h2 {
+    @media (width < 500px) {
+        font-size: 1em;
+        filter: drop-shadow(2px 2px 0px black);
+    }
+}
+
+.border-l::before {
+    @media (min-width:1000px) {
+        content: "";
+
+        padding: 1rem;
+        
+        border: 1px solid #dee2e6;
+    }
+}
+
+.date-title {
+    /* font-family: "EB Garamond", serif; */
+    font-family: "Bodoni Moda", serif;
+    font-optical-sizing: auto;
+    font-weight: 300;
+}
+
+.location-title {
+    font-family: "Pinyon Script", cursive;
 }
 
 
