@@ -2,6 +2,8 @@ import dotenv  from "dotenv";
 import path,{ resolve } from "path";
 import mysql from "mysql2/promise";
 import nodemailer from "nodemailer";
+import { websiteEmail } from "../constants/string.constants.js";
+import Mailjet from "node-mailjet";
 
 const configFilePath = path.resolve('./config/.env');
 
@@ -27,9 +29,9 @@ const transporter = nodemailer.createTransport({
     auth : {
         user: process.env.NODEMAILER_USR,
         pass : process.env.NODEMAILER_PWD
-    }
+    },
+    from: websiteEmail
 });
-
 
 export {
     pool,
