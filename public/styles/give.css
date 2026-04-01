@@ -1,9 +1,10 @@
 .main-img {
     background-image: url("/img/webp/couple-2.webp");
-    background-position: cover;
+    background-position: center;
     background-size: cover;
-    height: 400px;
+    height: 450px;
     max-height: 600px;
+    min-width: 300px;
 }
 
 .m-nav {
@@ -50,11 +51,18 @@ h1 {
 }
 
 h2 {
+    
     font-family: "Pinyon Script", cursive;
     font-weight: 400;
     font-style: normal;
     font-size: 12vw;
     text-align: center;
+    @media (width > 500px) {
+        font-size: calc(1.5rem + 3vw);
+    }
+    @media (width > 700px) and (width <1199px) {
+        font-size: calc(1.5rem + 5vw);
+    }
 }
 
 p {
@@ -97,11 +105,71 @@ h3 {
 
 .payment-container {
     min-height: 300px; 
-    background-color: ;
+
 }
 
 body {
-    height: 100vh;
+
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.border-v::before {
+
+    @media (min-width: 100px) {
+        top: -20px;
+        right: -20px;
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 80%;
+        z-index: -1;
+        max-width: 400px;
+        border: solid 2px #7B1B38;
+    }
+
+    @media (min-width: 500px) {
+        content: "";
+        position: absolute;
+                top: -20px;
+        right: -20px;
+        width: 100%;
+        height: 80%;
+        z-index: -1;
+        max-width: 400px;
+        border: solid 2px #7B1B38;
+    }
+    
+    @media (width > 799px) {
+        content: "";
+        position: absolute;
+        width: 100%;
+        top: -20px;
+        right: -20px;
+        height: 80%;
+        z-index: -1;
+        /* transform: translate(15%, -5%); */
+        border: solid 2px #7B1B38;
+    }
+
+    @media (width > 1199px) {
+        content: "";
+        position: absolute;
+        width: 100%;
+        height: 80%;
+        z-index: -1;
+
+        border: solid 2px #7B1B38;
+    }
+    
+}
+
+.border-v {
+
+    position: relative;
+
 }
 
 html,body,footer {
