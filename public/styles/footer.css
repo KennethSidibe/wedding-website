@@ -1,0 +1,75 @@
+
+footer {
+    width: 100%;
+    background-image: url("/img/couple-1.JPG");
+    background-size: 250%;
+    @media (width > 800px) {
+        background-size: cover;
+    }
+    background-position: center;
+}
+
+footer .initials {
+    font-family: "WilliamNarasi", cursive;
+    font-size: calc(1.5rem + 2vw);
+}
+
+footer p {
+    color: white;
+    filter: drop-shadow(0.2rem 0.2rem 0.15rem black);
+}
+
+footer .nav-link {
+    color: rgb(233, 133, 133);
+    font-family: "EB Garamond", serif;
+}
+
+footer .nav-link:hover {
+    color: rgb(254, 2, 2);
+}
+
+footer .nav-link:focus {
+    color: rgb(254, 2, 2);
+}
+
+.nav-button:hover {
+    text-decoration: underline;
+}
+
+
+.oranienbaum-regular {
+  font-family: "Oranienbaum", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.eb-garamond {
+  font-family: "EB Garamond", serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.pinyon-script {
+  font-family: "Pinyon Script", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.nunito {
+  font-family: "Nunito", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+    font-family: "WilliamNarasi";
+    src: url("/fonts/WilliamNarasi.ttf");
+}
+
+
+@font-face {
+    font-family: "Cherolina";
+    src: url("/fonts/cherolina/Cherolina.otf");
+}

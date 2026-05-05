@@ -1,0 +1,53 @@
+.m-nav {
+    background-color: white;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    padding-block: 1rem;
+}
+
+.nav-button {
+    font-family: "EB Garamond", serif;
+    font-weight: 200;
+    font-size: large;
+    
+    font-style: normal;
+}
+
+
+.oranienbaum-regular {
+  font-family: "Oranienbaum", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.eb-garamond {
+  font-family: "EB Garamond", serif;
+  font-optical-sizing: auto;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.pinyon-script {
+  font-family: "Pinyon Script", cursive;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.nunito {
+  font-family: "Nunito", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+    font-family: "WilliamNarasi";
+    src: url("/fonts/WilliamNarasi.ttf");
+}
+
+
+@font-face {
+    font-family: "Cherolina";
+    src: url("/fonts/cherolina/Cherolina.otf");
+}
