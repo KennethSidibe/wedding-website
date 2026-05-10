@@ -4,6 +4,10 @@ import express from "express";
 import path, {dirname } from "path";
 import { fileURLToPath } from "url";
 import { createNewInvitee, retrieveAllInvitees, retrieveInvitee} from "./controllers/invitees.controller.js";
+import { readFileSync } from 'fs';
+
+const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
+const version = pkg.version;
 
 const __dirName = dirname(fileURLToPath(import.meta.url));
 
@@ -14,6 +18,27 @@ const port = 3000;
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(express.static(__dirName + "/public"));
 app.use(express.json());
+
+// Automatically append ?v= to all .css and .js links in every response
+app.use((req, res, next) => {
+  const originalRender = res.render.bind(res);
+
+  res.render = (view, options, callback) => {
+    originalRender(view, options, (err, html) => {
+      if (err) return next(err);
+
+      // Inject version into all static asset URLs
+      const busted = html
+        .replace(/(href|src)="(\/[^"]+\.(css|js))"/g, `$1="$2?v=${version}"`);
+
+      res.send(busted);
+    });
+  };
+
+  next();
+});
+
+
 
 // Routes
 app.listen(port, () => {
