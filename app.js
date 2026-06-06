@@ -7,6 +7,7 @@ import { createNewInvitee, retrieveAllInvitees, retrieveInvitee} from "./control
 import { readFileSync } from 'fs';
 import { cacheBusting } from "./middlewares/cacheBusting.js";
 import { staticCache } from "./middlewares/staticCache.js";
+import { lazyLoad } from "./middlewares/lazyLoad.js";
 
 const pkg = JSON.parse(readFileSync('./package.json', 'utf-8'));
 const version = pkg.version;
@@ -19,11 +20,14 @@ const port = 3000;
 const publicPath = path.join(__dirName, "public");
 
 // Middleware
+app.use(lazyLoad);
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(express.json());
 
 app.use(staticCache(publicPath));
 app.use(cacheBusting);
+
+
 
 
 // Routes
