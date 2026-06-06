@@ -524,6 +524,14 @@ p {
     /* position: absolute;
     z-index: 2; */
     color: white;
+    flex-wrap: nowrap;
+    
+
+}
+
+.dates-row-item {
+    min-width: 0;
+    flex: 1;
 }
 
 
