@@ -1,0 +1,255 @@
+.oranienbaum-regular {
+  font-family: "Oranienbaum", serif;
+  font-weight: 400;
+  font-style: normal;
+}
+
+.nunito {
+  font-family: "Nunito", sans-serif;
+  font-optical-sizing: auto;
+  font-weight: 100;
+  font-style: normal;
+}
+
+@font-face {
+    font-family: "WilliamNarasi";
+    src: url("/fonts/WilliamNarasi.ttf");
+}
+
+@font-face {
+    font-family: "Cherolina";
+    src: url("./fonts/cherolina/Cherolina.otf");
+}
+
+h1 {
+    font-family: "WilliamNarasi";
+    font-size: 5rem!;
+}
+
+h2 {
+    font-family: "Pinyon Script", cursive;
+}
+
+h2.double-word {
+    font-size: calc(1.3rem + 4.5vw);
+
+    @media (min-width:1200px) {
+        font-size: calc(1rem + 4.5vw);
+    }
+}
+
+p {
+    font-size: calc(1rem + 0.35vw);
+    @media (width > 1800px) {
+        font-size: calc(1rem + 0.4vw);
+    }
+    font-family: "EB Garamond", serif;
+}
+
+a {
+    color: black;
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+a:active:has(h1),
+a:focus:has(h1),
+a:hover:has(h1)
+{
+    text-decoration: none;
+}
+
+/* Login form */
+
+.form-img {
+    background-image: url("/img/couple-4.JPG");
+    background-size: cover;
+    background-position: center;
+    margin: 0;
+    padding: 0;
+}
+
+.form-style {
+    padding: 3rem;
+
+    @media (width > 1200px) {
+        width: 50%;
+    }
+}
+
+form label {
+    font-family: "Oranienbaum", cursive;
+    font-size: larger;
+}
+
+#pin-label {
+    color: #000000;
+    filter: drop-shadow(2px 3px 2px rgba(255, 0, 0, 0.5));
+}
+
+#pinInput {
+    max-width: 15rem;
+    letter-spacing: 0.5rem;
+    text-align: center;
+}
+
+.login-error {
+    font-family: "EB Garamond", serif;
+    color: red;
+    background-color: white;
+    border-radius: 20px;
+    padding: 0.75rem 1.5rem;
+    filter: drop-shadow(3px 3px 4px #00000068);
+}
+
+.g-form {
+    @media (width < 800px) {
+        margin-bottom: 5rem;
+    }
+}
+
+/* Invitees list */
+
+.invitees-list {
+    @media (width > 1200px) {
+        max-width: 60rem;
+    }
+}
+
+.invitees-count {
+    font-family: "EB Garamond", serif;
+}
+
+.list-empty,
+.list-error {
+    font-family: "EB Garamond", serif;
+}
+
+.list-error {
+    color: #7B1B38;
+}
+
+.invitees-table {
+    font-family: "EB Garamond", serif;
+    font-size: calc(0.9rem + 0.25vw);
+    border: solid 1px #dee2e6;
+}
+
+.invitees-table thead th {
+    font-family: "Oranienbaum", serif;
+    font-weight: 400;
+    color: white;
+    background-color: #7B1B38;
+}
+
+/* Each invitee spans 2 rows (main + collapsible detail),
+   so stripe every other pair to keep the zebra pattern */
+.invitees-table tbody tr:nth-child(4n+3),
+.invitees-table tbody tr:nth-child(4n) {
+    background-color: #f8f2f4;
+    --bs-table-bg: #f8f2f4;
+}
+
+/* Mobile: hide the email column and let each row expand instead,
+   so the table fits the screen without horizontal scrolling */
+
+.toggle-col {
+    display: none;
+    width: 2.5rem;
+    text-align: center;
+}
+
+.mobile-hint {
+    display: none;
+    font-size: 1rem;
+    font-style: italic;
+    color: #591427;
+}
+
+.invitee-detail td {
+    word-break: break-all;
+}
+
+.invitee-row .toggle-caret {
+    transition: transform 0.2s ease;
+}
+
+.invitee-row[aria-expanded="true"] .toggle-caret {
+    transform: rotate(180deg);
+}
+
+@media (width < 800px) {
+    .invitees-table .email-col {
+        display: none;
+    }
+
+    .toggle-col {
+        display: table-cell;
+    }
+
+    .mobile-hint {
+        display: block;
+    }
+
+    .invitee-row {
+        cursor: pointer;
+    }
+}
+
+@media (width >= 800px) {
+    .invitee-detail {
+        display: none !important;
+    }
+}
+
+.logout-btn {
+    font-family: "EB Garamond", serif;
+    border-radius: 0.5rem;
+}
+
+body {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+footer {
+    width: 100%;
+    background-image: url("/img/couple-1.JPG");
+    background-size: 250%;
+    @media (width > 800px) {
+        background-size: cover;
+    }
+    background-position: center;
+
+    @media (width>1023px) {
+        margin-top: 4rem;
+    }
+}
+
+footer p {
+    color: rgb(255, 255, 255);
+    filter: drop-shadow(0.2rem 0.2rem 0.15rem black);
+}
+
+footer .nav-link {
+    color: rgb(233, 133, 133);
+    font-family: "EB Garamond", serif;
+}
+
+footer .nav-link:hover {
+    color: rgb(254, 2, 2);
+}
+
+footer .nav-link:focus {
+    color: rgb(254, 2, 2);
+}
+
+footer .text {
+    font-family: "WilliamNarasi", cursive;
+    font-size: calc(1.5rem + 2vw);
+}

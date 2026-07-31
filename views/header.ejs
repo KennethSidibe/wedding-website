@@ -18,6 +18,48 @@
     />
     <!-- Bootstrap -->
 
+    <!-- Theme -->
+    <link rel="stylesheet" href="/styles/theme.css" />
+    <script>
+      // Runs before first paint so the page never flashes the wrong theme.
+      // The visitor's own clock decides (dark from 19h to 7h); reading it
+      // needs no permission. A manual click overrides the clock, but only
+      // until the clock next changes its mind — so automatic always returns.
+      // The 19h/7h window is repeated in /js/theme-toggle.js; keep them equal.
+      (function () {
+        var hour = new Date().getHours();
+        var clockTheme = hour >= 19 || hour < 7 ? "dark" : "light";
+        var theme = clockTheme;
+
+        try {
+          var saved = JSON.parse(localStorage.getItem("ls-theme"));
+
+          if (saved && (saved.theme === "dark" || saved.theme === "light")) {
+            if (saved.auto === clockTheme) {
+              theme = saved.theme;
+            } else {
+              // The clock has since moved to the other side of the window,
+              // so the override is spent. Delete it, or it would come back
+              // to life the next time the clock returns to saved.auto.
+              localStorage.removeItem("ls-theme");
+            }
+          } else if (saved !== null) {
+            // Legacy plain-string value from an earlier build.
+            localStorage.removeItem("ls-theme");
+          }
+        } catch (e) {
+          try {
+            localStorage.removeItem("ls-theme");
+          } catch (e2) {}
+        }
+
+        document.documentElement.setAttribute("data-theme", theme);
+        document.documentElement.setAttribute("data-bs-theme", theme);
+      })();
+    </script>
+    <script defer src="/js/theme-toggle.js"></script>
+    <!-- Theme -->
+
     <!-- Styles -->
 
 

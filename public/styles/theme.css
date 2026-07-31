@@ -1,0 +1,254 @@
+/* Dark theme.
+   Loaded from header.ejs on every page, before the per-page stylesheet.
+   Every rule is prefixed with html[data-theme="dark"] so it outranks the
+   page stylesheets on specificity rather than on source order.
+   Bootstrap 5.3 components are handled separately by data-bs-theme,
+   which the inline script in header.ejs sets alongside data-theme. */
+
+:root[data-theme="dark"] {
+    color-scheme: dark;
+
+    --ls-bg: #121011;
+    --ls-surface: #1e1b1c;
+    --ls-text: #ece7e4;
+    --ls-muted: #b0a7a3;
+    --ls-accent: #d38aa0;
+    --ls-accent-strong: #8f2545;
+    /* Chosen by the owner. Drives every decorative line in dark mode:
+       the timeline dashes, the timeline dots and the photo frames. */
+    --ls-line: #dc2424;
+    --ls-border: rgba(255, 255, 255, 0.12);
+}
+
+/* Page surfaces */
+
+html[data-theme="dark"] body {
+    background-color: var(--ls-bg);
+    color: var(--ls-text);
+}
+
+html[data-theme="dark"] .m-nav {
+    background-color: var(--ls-bg);
+    border-bottom: 1px solid var(--ls-border);
+}
+
+html[data-theme="dark"] a {
+    color: var(--ls-text);
+}
+
+html[data-theme="dark"] .gift-text,
+html[data-theme="dark"] .gift-text-v2 {
+    background-color: var(--ls-surface);
+    filter: drop-shadow(3px 3px 4px rgba(0, 0, 0, 0.6));
+}
+
+/* Forms sitting on a photo (/invitees and /admin/login both use .form-img).
+   The photograph behind them is identical in both themes, so everything on
+   top of it must stay identical too. Left to Bootstrap's dark theme the
+   inputs turn near-black and the labels turn near-white, and both disappear
+   into the picture. */
+
+html[data-theme="dark"] .form-img .form-control {
+    background-color: #fff;
+    color: #212529;
+    border-color: #dee2e6;
+}
+
+html[data-theme="dark"] .form-img .form-control::placeholder {
+    color: #6c757d;
+    opacity: 1;
+}
+
+html[data-theme="dark"] .form-img .form-control:focus {
+    background-color: #fff;
+    color: #212529;
+    border-color: #86b7fe;
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+
+html[data-theme="dark"] .form-img .form-control:disabled {
+    background-color: #e9ecef;
+    color: #212529;
+}
+
+/* Nom / Prénom / Code PIN. #email-label keeps its own white via its id. */
+html[data-theme="dark"] .form-img label {
+    color: #000;
+}
+
+html[data-theme="dark"] .border-f::after {
+    background-color: var(--ls-surface);
+    border-color: var(--ls-border);
+}
+
+/* Decorative frames and accents */
+
+html[data-theme="dark"] .border-v::before,
+html[data-theme="dark"] .border-v.left::before,
+html[data-theme="dark"] .border-l::before {
+    border-color: var(--ls-line);
+}
+
+html[data-theme="dark"] .offer-cta,
+html[data-theme="dark"] .mobile-hint,
+html[data-theme="dark"] .list-error {
+    color: var(--ls-accent);
+}
+
+html[data-theme="dark"] .give-btn {
+    background-color: var(--ls-accent-strong);
+    border-color: var(--ls-accent-strong);
+    color: #fff;
+    filter: drop-shadow(2px 2px 3px rgba(0, 0, 0, 0.7));
+}
+
+html[data-theme="dark"] .give-btn:hover,
+html[data-theme="dark"] .give-btn:focus,
+html[data-theme="dark"] .give-btn:active {
+    background-color: #a72e52;
+    border-color: #a72e52;
+}
+
+html[data-theme="dark"] .circle-shape {
+    color: var(--ls-bg);
+    background-color: var(--ls-text);
+}
+
+/* Programme timeline.
+   The dashed lines blend with mix-blend-mode: darken, which erases a light
+   line on a dark page — switch the blending off and lighten the colour. */
+
+html[data-theme="dark"] .vertical-line,
+html[data-theme="dark"] .vertical-line-v2,
+html[data-theme="dark"] .circle-dash {
+    --line-color: var(--ls-line);
+    mix-blend-mode: normal;
+}
+
+html[data-theme="dark"] .circle-line {
+    background-color: var(--ls-line);
+}
+
+/* Admin */
+
+/* btn-outline-dark is a dark border and dark text — invisible on a dark page */
+html[data-theme="dark"] .logout-btn.btn-outline-dark {
+    --bs-btn-color: var(--ls-text);
+    --bs-btn-border-color: rgba(255, 255, 255, 0.35);
+    --bs-btn-hover-color: var(--ls-bg);
+    --bs-btn-hover-bg: var(--ls-text);
+    --bs-btn-hover-border-color: var(--ls-text);
+    --bs-btn-active-color: var(--ls-bg);
+    --bs-btn-active-bg: var(--ls-text);
+    --bs-btn-active-border-color: var(--ls-text);
+}
+
+html[data-theme="dark"] .invitees-table {
+    border-color: var(--ls-border);
+}
+
+html[data-theme="dark"] .invitees-table tbody tr:nth-child(4n + 3),
+html[data-theme="dark"] .invitees-table tbody tr:nth-child(4n) {
+    background-color: #241d20;
+    --bs-table-bg: #241d20;
+}
+
+/* Footer sits on a photo, so its white text already works — only the
+   divider needs toning down */
+
+html[data-theme="dark"] footer.border-top {
+    border-top-color: var(--ls-border) !important;
+}
+
+/* Theme toggle button */
+
+.theme-toggle {
+    position: absolute;
+    top: 1rem;
+    right: 1.25rem;
+    z-index: 2;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 2.4rem;
+    height: 2.4rem;
+    padding: 0;
+
+    background: none;
+    border: 1px solid rgba(0, 0, 0, 0.12);
+    border-radius: 50%;
+    color: #1c1c1e;
+
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.theme-toggle:hover,
+.theme-toggle:focus-visible {
+    background-color: rgba(0, 0, 0, 0.05);
+    outline: none;
+}
+
+@media (max-width: 576px) {
+    .theme-toggle {
+        top: 0.5rem;
+        right: 0.6rem;
+        width: 2rem;
+        height: 2rem;
+    }
+}
+
+html[data-theme="dark"] .theme-toggle {
+    border-color: var(--ls-border);
+    color: var(--ls-text);
+}
+
+html[data-theme="dark"] .theme-toggle:hover,
+html[data-theme="dark"] .theme-toggle:focus-visible {
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+/* Show the icon for the mode the button switches *to* */
+
+.theme-toggle .theme-icon-sun {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle .theme-icon-moon {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle .theme-icon-sun {
+    display: block;
+}
+
+/* Registration confirmation card — dark variant */
+
+html[data-theme="dark"] .register-toast {
+    background-color: #1c1c1e;
+    border-color: rgba(255, 255, 255, 0.09);
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.6);
+}
+
+html[data-theme="dark"] .register-toast-title {
+    color: #fff;
+}
+
+html[data-theme="dark"] .register-toast-text {
+    color: rgba(255, 255, 255, 0.65);
+}
+
+html[data-theme="dark"] .register-toast-close {
+    color: rgba(255, 255, 255, 0.5);
+}
+
+html[data-theme="dark"] .register-toast-close:hover,
+html[data-theme="dark"] .register-toast-close:focus-visible {
+    color: #fff;
+    background-color: rgba(255, 255, 255, 0.08);
+}
+
+html[data-theme="dark"] .register-toast-progress {
+    background-color: rgba(255, 255, 255, 0.06);
+}

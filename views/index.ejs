@@ -8,6 +8,30 @@
   <body>
     <%- include("navbar.ejs") %>
 
+    <% if (typeof registered !== 'undefined' && registered) { %>
+    <div id="registerToast" class="register-toast" role="status" aria-live="polite">
+      <button
+        type="button"
+        id="registerToastClose"
+        class="register-toast-close"
+        aria-label="Fermer"
+      >
+        &times;
+      </button>
+
+      <div class="register-toast-body">
+        <h3 class="register-toast-title">Merci!</h3>
+        <p class="register-toast-text">
+          Merci de t'être enregistré, on t'attend avec impatience&nbsp;!
+        </p>
+      </div>
+
+      <div class="register-toast-progress">
+        <span class="register-toast-progress-bar"></span>
+      </div>
+    </div>
+    <% } %>
+
     <div id="intro" class="section">
       <div class="img-container d-flex justify-content-center align-items-end">
         <div class="container d-flex justify-content-center align-items-center">
@@ -41,12 +65,20 @@
           <div class="col-md border-f pb-4 pb-lg-0 col-lg-4">
             <p class="text-align-left mt-2 section-text">
               C’est avec une grande joie que nous vous annonçons notre mariage.
-              La cérémonie traditionnelle aura lieu le samedi 1er août 2026 à
-              Abidjan, et le mariage civil se tiendra le 8 août 2026 à
-              Ouagadougou. Nous serions très heureux de célébrer ces moments
-              uniques entourés de ceux que nous aimons. Votre présence est le
-              plus beau des cadeaux.
+              La cérémonie traditionnelle aura lieu le samedi <b>2 Janvier 2027 à
+              Abidjan</b>, et le mariage civil se tiendra le <b>26 Décembre 2026 à
+              Ouagadougou</b>. Nous serons très heureux de célébrer ces moments
+              uniques entourés de ceux que nous aimons. 
+              <br>
+              <span style="text-decoration: underline;" >Cliquer sur "S'enregistrer" pour confirmer votre place</span>
             </p>
+                  <div class="row mt-4 mb-3 text-center">
+        <div class="col">
+          <a href="/invitees"
+            ><button class="btn fs-3 btn-dark give-btn">S'enregistrer</button></a
+          >
+        </div>
+      </div>
           </div>
           <div class="col-lg-6 border-v d-flex justify-content-center">
             <img src="/img/couple-2.JPG" class="img-fluid couple-img" alt="" />
@@ -79,13 +111,20 @@
               est entièrement volontaire. Merci du fond du cœur pour votre amour
               et votre soutien. Nous avons hâte de partager ce bonheur avec
               vous!
+              <br>
+              <b>Cliquez sur offrir pour voir les moyens de nous offrir un cadeau.</b>
             </p>
+            
           </div>
         </div>
       </div>
 
       <div class="row mt-4 text-center">
         <div class="col">
+          <p class="offer-cta mb-3">
+            Envie de faire plaisir aux mariés&nbsp;? Cliquez sur le bouton
+            ci-dessous pour nous offrir un cadeau.
+          </p>
           <a href="/give"
             ><button class="btn fs-3 btn-dark give-btn">Offrir</button></a
           >
@@ -195,7 +234,7 @@
             </p>
           </div>
           <div class="col-lg-6 border-v d-flex justify-content-center">
-            <img src="/img/couple-2.JPG" class="img-fluid couple-img" alt="" />
+            <img src="/img/couple-9.JPG" class="img-fluid couple-img" alt="" />
           </div>
 
           <!-- Right img text -->
@@ -207,8 +246,8 @@
             class="col-lg-6 d-flex justify-content-sm-center justify-content-lg-start border-v left order-2 order-sm-1"
           >
             <div style="position: relative; display: inline-block;">
-              <img src="/img/couple-3.png" class="img-fluid couple-img" alt="" />
-              <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); color: #fff; font-size: 1.5rem; font-weight: bold; white-space: nowrap; text-shadow: 0 0 4px rgba(0,0,0,0.8); pointer-events: none;" class="img-notice">Image must be updated</span>
+              <img src="/img/couple-7.JPG" class="img-fluid couple-img" alt="" />
+              <!-- <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); color: #fff; font-size: 1.5rem; font-weight: bold; white-space: nowrap; text-shadow: 0 0 4px rgba(0,0,0,0.8); pointer-events: none;" class="img-notice">Image must be updated</span> -->
             </div>
           </div>
 
@@ -238,7 +277,7 @@
               </p>
             </div>
             <div class="col-lg-6 border-v d-flex justify-content-center">
-              <img src="/img/couple-2.JPG" class="img-fluid couple-img" alt="" />
+              <img src="/img/couple-10.JPG" class="img-fluid couple-img" alt="" />
             </div>
         </div>
       
@@ -248,6 +287,8 @@
   </body>
 
   <%- include("footer.ejs") %>
+
+  <script defer src="/js/register-toast.js"></script>
 
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"

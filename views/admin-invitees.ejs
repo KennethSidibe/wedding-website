@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+
+    <%- include ("header.ejs") %>
+
+    <!-- Styles -->
+    <link rel="stylesheet" href="/styles/admin.css" />
+    <!-- Styles -->
+
+  <body>
+
+    <%- include('navbar.ejs') %>
+
+    <div class="container invitees-list my-3">
+      <div class="row section-title">
+        <div class="col text-center mb-sm-4">
+          <h2 class="double-word">Nos Invités</h2>
+        </div>
+      </div>
+
+      <div class="row mb-4 align-items-center">
+        <div class="col">
+          <p class="invitees-count mb-0">
+            <% if (locals.invitees && invitees.length > 0) { %>
+            <b><%= invitees.length %></b> invité<%= invitees.length > 1 ? 's' : '' %> enregistré<%= invitees.length > 1 ? 's' : '' %>
+            <% } %>
+          </p>
+        </div>
+        <div class="col-auto">
+          <form method="post" action="/admin/logout">
+            <button type="submit" class="btn btn-outline-dark logout-btn">
+              Se déconnecter
+            </button>
+          </form>
+        </div>
+      </div>
+
+      <% if (locals.errorMessage) { %>
+      <div class="row text-center mb-4">
+        <p class="list-error"><%= errorMessage %></p>
+      </div>
+      <% } else if (!locals.invitees || invitees.length === 0) { %>
+      <div class="row text-center mb-4">
+        <p class="list-empty">Aucun invité enregistré pour le moment.</p>
+      </div>
+      <% } else { %>
+      <p class="mobile-hint text-center">
+        Touchez une ligne pour afficher l'adresse e-mail de l'invité.
+      </p>
+
+      <div class="row">
+        <div class="col table-responsive">
+          <table class="table invitees-table">
+            <thead>
+              <tr>
+                <th scope="col">#</th>
+                <th scope="col">Prénom</th>
+                <th scope="col">Nom</th>
+                <th scope="col" class="email-col">Adresse e-mail</th>
+                <th scope="col" class="toggle-col">
+                  <span class="visually-hidden">Afficher l'e-mail</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              <% invitees.forEach((invitee, index) => { %>
+              <tr
+                class="invitee-row"
+                data-bs-toggle="collapse"
+                data-bs-target="#invitee-detail-<%= index %>"
+                aria-expanded="false"
+                aria-controls="invitee-detail-<%= index %>"
+              >
+                <th scope="row"><%= index + 1 %></th>
+                <td><%= invitee.fName %></td>
+                <td><%= invitee.lName %></td>
+                <td class="email-col"><%= invitee.email %></td>
+                <td class="toggle-col">
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    fill="currentColor"
+                    class="bi bi-caret-down-fill toggle-caret"
+                    viewBox="0 0 16 16"
+                  >
+                    <path
+                      d="M7.247 11.14 2.451 5.658C1.885 5.013 2.345 4 3.204 4h9.592a1 1 0 0 1 .753 1.659l-4.796 5.48a1 1 0 0 1-1.506 0z"
+                    />
+                  </svg>
+                </td>
+              </tr>
+              <tr class="collapse invitee-detail" id="invitee-detail-<%= index %>">
+                <td colspan="5"><b>E-mail&nbsp;:</b> <%= invitee.email %></td>
+              </tr>
+              <% }) %>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <% } %>
+    </div>
+
+    <%- include("footer.ejs") %>
+
+  </body>
+
+  <script
+    src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"
+    integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
+    crossorigin="anonymous"
+  ></script>
+</html>
