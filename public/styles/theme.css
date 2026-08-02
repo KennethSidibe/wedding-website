@@ -95,18 +95,24 @@ html[data-theme="dark"] .list-error {
     color: var(--ls-accent);
 }
 
+/* --ls-btn-bg / --ls-btn-text are the admin's choice from the page editor. When
+   the admin has never touched the colours these fall back to the site defaults
+   rather than the dark-mode accent, which is deliberate: a colour the admin
+   picked has to win in both themes, otherwise the picker would look broken at
+   night. Only the shadow is adapted for the dark background. */
 html[data-theme="dark"] .give-btn {
-    background-color: var(--ls-accent-strong);
-    border-color: var(--ls-accent-strong);
-    color: #fff;
+    background-color: var(--ls-btn-bg, var(--ls-accent-strong));
+    border-color: var(--ls-btn-bg, var(--ls-accent-strong));
+    color: var(--ls-btn-text, #fff);
     filter: drop-shadow(2px 2px 3px rgba(0, 0, 0, 0.7));
 }
 
 html[data-theme="dark"] .give-btn:hover,
 html[data-theme="dark"] .give-btn:focus,
 html[data-theme="dark"] .give-btn:active {
-    background-color: #a72e52;
-    border-color: #a72e52;
+    background-color: var(--ls-btn-bg, var(--ls-accent-strong));
+    border-color: var(--ls-btn-bg, var(--ls-accent-strong));
+    filter: drop-shadow(2px 2px 3px rgba(0, 0, 0, 0.7)) brightness(1.15);
 }
 
 html[data-theme="dark"] .circle-shape {

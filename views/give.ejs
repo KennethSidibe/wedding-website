@@ -8,23 +8,35 @@
   <link rel="stylesheet" href="/styles/give.css" />
   <!-- Styles -->
 
-  <body>
-    
+  <body class="<%= typeof editMode !== 'undefined' && editMode ? 'ls-edit-mode' : '' %>">
+
+    <% if (typeof editMode !== 'undefined' && editMode) { %>
+    <%- include("edit-bar.ejs", { editPage: 'give', editPageLabel: 'Offrir' }) %>
+    <% } %>
+
     <%- include('navbar.ejs') %>
 
-    <div class="container my-4">
+    <%
+      // give-container narrows Bootstrap's container and adds real side
+      // padding, so the photo is not pushed against (or past) the right edge.
+    %>
+    <div class="container give-container my-4">
       <div class="row title my-4">
         <div class="col">
-          <h2>Merci de ton geste</h2>
+          <h2><%- slot('give.title') %></h2>
         </div>
       </div>
       <div class="d-flex flex-column flex-md-row justify-content-center">
-        <div class="d-flex flex-column justify-content-md-center">
+        <%
+          // give-text-col carries `min-width: 0`. Without it this flex item is
+          // sized by its own content, so a longer intro widened the column and
+          // pushed the photo out of the row instead of wrapping.
+        %>
+        <div class="d-flex flex-column justify-content-md-center give-text-col">
           <div class="row text justify-content-start">
             <div class="col-sm-12 col-md-8">
               <p class="">
-                Pour nous faire une donation, vous pouvez utiliser l'un des
-                moyens de paiement ci-dessous :
+                <%- slot('give.intro') %>
               </p>
             </div>
           </div>
@@ -114,17 +126,17 @@
               >
                 <div class="row">
                   <div class="col">
-                    <h3>Détails Wave:</h3>
+                    <h3><%- slot('give.wave.title') %></h3>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col">
-                    <p><b>Numéro de téléphone:</b> +1 343 434 5455</p>
+                    <p><b>Numéro de téléphone:</b> <%- slot('give.wave.phone') %></p>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col">
-                    <p><b>Nom:</b> Moussa Zombré</p>
+                    <p><b>Nom:</b> <%- slot('give.wave.name') %></p>
                   </div>
                 </div>
               </div>
@@ -134,17 +146,17 @@
               >
                 <div class="row">
                   <div class="col">
-                    <h3>Détails Orange Money:</h3>
+                    <h3><%- slot('give.orange.title') %></h3>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col">
-                    <p><b>Numéro de téléphone:</b> +1 343 434 5455</p>
+                    <p><b>Numéro de téléphone:</b> <%- slot('give.orange.phone') %></p>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col">
-                    <p><b>Nom:</b> Moussa Zombré</p>
+                    <p><b>Nom:</b> <%- slot('give.orange.name') %></p>
                   </div>
                 </div>
               </div>
@@ -154,22 +166,22 @@
               >
                 <div class="row">
                   <div class="col">
-                    <h3>Détails Interac:</h3>
+                    <h3><%- slot('give.interac.title') %></h3>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col">
-                    <p><b>Numéro de téléphone:</b> +1 343 434 5455</p>
+                    <p><b>Numéro de téléphone:</b> <%- slot('give.interac.phone') %></p>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col">
-                    <p><b>Adresse e-mail:</b> sheridan@test.com</p>
+                    <p><b>Adresse e-mail:</b> <%- slot('give.interac.email') %></p>
                   </div>
                 </div>
                 <div class="row">
                   <div class="col">
-                    <p><b>Nom:</b> Moussa Zombré</p>
+                    <p><b>Nom:</b> <%- slot('give.interac.name') %></p>
                   </div>
                 </div>
               </div>
@@ -177,7 +189,13 @@
           </div>
         </div>
         <div class="row px-4 px-md-0 img">
-          <div class="col-sm-12 col-md  border-v main-img"></div>
+          <div
+            class="col-sm-12 col-md  border-v main-img"
+            data-img-slot="give.image"
+            data-img-var="--ls-give-image"
+            data-img-value="<%= imgSrc('give.image') %>"
+            style="--ls-give-image: url('<%= imgSrc('give.image') %>')"
+          ></div>
         </div>
       </div>
     </div>
@@ -195,4 +213,8 @@
     crossorigin="anonymous"
   ></script>
   <script src="js/give.js"></script>
+
+  <% if (typeof editMode !== 'undefined' && editMode) { %>
+  <script defer src="/js/edit-mode.js"></script>
+  <% } %>
 </html>

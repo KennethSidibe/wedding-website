@@ -1,5 +1,7 @@
 .main-img {
-    background-image: url("/img/webp/couple-2.webp");
+    /* Editable from the page editor; the literal is the fallback and must stay
+       equal to the default in constants/content.slots.js. */
+    background-image: var(--ls-give-image, url("/img/webp/couple-2.webp"));
     background-position: center;
     background-size: cover;
     height: 450px;
@@ -209,3 +211,40 @@ footer .text {
     font-family: "WilliamNarasi", cursive;
     font-size: calc(1.5rem + 2vw);
 }
+/* Same guard as home.css: a long unbroken string would otherwise run out of
+   its column instead of wrapping. */
+p,
+h2,
+h3 {
+    overflow-wrap: break-word;
+}
+
+/* The text side of the payment layout is a flex item with an automatic basis,
+   so its width was decided by its own content: adding a sentence to the intro
+   made the whole column wider and pushed the photo out of the row rather than
+   wrapping the text. `min-width: 0` lets a flex item shrink below its
+   max-content size — without it, `min-width: auto` pins the column to the
+   width of its longest line. */
+/* The payment layout is a two-column flex row inside `.container`. Bootstrap's
+   container is wide (up to 1320px), which pushed the photo hard against its
+   right edge — and on a ~1000px viewport past it, where `overflow-x: clip` on
+   body cropped the photo in half. Narrowing the container and giving it real
+   side padding pulls both columns back toward the middle of the page.
+   The padding scales with the viewport so small screens do not lose room. */
+.give-container {
+    max-width: 1080px;
+    padding-inline: clamp(1rem, 5vw, 3.5rem);
+}
+
+.give-text-col {
+    min-width: 0;
+    max-width: 100%;
+    flex: 1 1 auto;
+}
+
+/* Deliberately scoped to that one wrapper. A blanket `min-width: 0` on every
+   Bootstrap column was tried and reverted on 2026-08-01: it also beat
+   `.main-img { min-width: 300px }` on specificity, which collapsed the photo
+   column to a sliver and pushed the whole row off-centre. The inner columns
+   need no such rule — they are sized in percentages, so once this wrapper is
+   bounded they wrap on their own. */

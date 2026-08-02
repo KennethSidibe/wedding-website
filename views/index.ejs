@@ -5,7 +5,11 @@
   <link rel="stylesheet" href="/styles/home.css" />
   <!-- Styles -->
 
-  <body>
+  <body class="<%= typeof editMode !== 'undefined' && editMode ? 'ls-edit-mode' : '' %>">
+    <% if (typeof editMode !== 'undefined' && editMode) { %>
+    <%- include("edit-bar.ejs", { editPage: 'home', editPageLabel: 'Accueil' }) %>
+    <% } %>
+
     <%- include("navbar.ejs") %>
 
     <% if (typeof registered !== 'undefined' && registered) { %>
@@ -33,19 +37,24 @@
     <% } %>
 
     <div id="intro" class="section">
-      <div class="img-container d-flex justify-content-center align-items-end">
+      <div
+        class="img-container d-flex justify-content-center align-items-end"
+        data-img-slot="home.hero.image"
+        data-img-var="--ls-hero-image"
+        data-img-value="<%= imgSrc('home.hero.image') %>"
+      >
         <div class="container d-flex justify-content-center align-items-center">
           <div
-            class="row dates-row d-flex justify-content-center align-items-center 
+            class="row dates-row d-flex justify-content-center align-items-center
              flex-md-row"
           >
             <div class="col mx-2 dates-row-item text-center">
-              <h2 class="date-title">26.12.2026</h1>
-              <h4 class="location-title">Abidjan, Côte d'Ivoire</h2>
+              <h2 class="date-title"><%- slot('home.hero.date1') %></h1>
+              <h4 class="location-title"><%- slot('home.hero.location1') %></h2>
             </div>
             <div class="col mx-2 dates-row-item text-center">
-              <h2 class="date-title">02.01.2027</h1>
-              <h4 class="location-title">Ouagadougou, Burkina Faso</h2>
+              <h2 class="date-title"><%- slot('home.hero.date2') %></h1>
+              <h4 class="location-title"><%- slot('home.hero.location2') %></h2>
             </div>
           </div>
         </div>
@@ -57,31 +66,41 @@
       <div class="container left-text my-3">
         <div class="row section-title">
           <div class="col text-center mb-sm-4">
-            <h2 class="double-word">Notre Mariage</h2>
+            <h2 class="double-word"><%- slot('home.mariage.title') %></h2>
           </div>
         </div>
 
         <div class="row justify-content-evenly align-items-end mx-auto">
           <div class="col-md border-f pb-4 pb-lg-0 col-lg-4">
             <p class="text-align-left mt-2 section-text">
-              C’est avec une grande joie que nous vous annonçons notre mariage.
-              La cérémonie traditionnelle aura lieu le Samedi <b>26 Décembre 2026 à
-              Abidjan</b>, et le mariage civil se tiendra le Samedi<b>2 Janvier 2027 à
-              Ouagadougou</b>. Nous serons très heureux de célébrer ces moments
-              uniques entourés de ceux que nous aimons. 
-              <br>
-              <span style="text-decoration: underline;" >Cliquer sur "S'enregistrer" pour confirmer votre place</span>
+              <%- slot('home.mariage.text') %>
             </p>
                   <div class="row mt-4 mb-3 text-center">
         <div class="col">
           <a href="/invitees"
-            ><button class="btn fs-3 btn-dark give-btn">S'enregistrer</button></a
+            ><button
+              class="btn fs-3 btn-dark give-btn"
+              data-color-slots="site.button.bg|site.button.text"
+            ><%- slot('home.mariage.button') %></button></a
           >
         </div>
       </div>
+
+            <div
+              class="border-strip"
+              data-img-slot="home.mariage.strip"
+              data-img-var="--ls-strip-image"
+              data-img-value="<%= imgSrc('home.mariage.strip') %>"
+              style="--ls-strip-image: url('<%= imgSrc('home.mariage.strip') %>')"
+            ></div>
           </div>
           <div class="col-lg-6 border-v d-flex justify-content-center">
-            <img src="/img/couple-2.JPG" class="img-fluid couple-img" alt="" />
+            <img
+              src="<%= imgSrc('home.mariage.image') %>"
+              data-img-slot="home.mariage.image"
+              class="img-fluid couple-img"
+              alt=""
+            />
           </div>
         </div>
       </div>
@@ -90,7 +109,7 @@
         <a class="anchor" id="gift-anchor"></a>
         <div class="row">
           <div class="col text-center mt-sm-4 mb-md-3">
-            <h2 class="double-word">Cadeaux</h2>
+            <h2 class="double-word"><%- slot('home.gift.title') %></h2>
           </div>
         </div>
 
@@ -98,23 +117,28 @@
           <div
             class="col-lg-6 d-flex justify-content-sm-center justify-content-lg-start border-v left order-2 order-sm-1"
           >
-            <img src="/img/couple-3.png" class="img-fluid couple-img" alt="" />
+            <img
+              src="<%= imgSrc('home.gift.image') %>"
+              data-img-slot="home.gift.image"
+              class="img-fluid couple-img"
+              alt=""
+            />
           </div>
 
           <div
             class="col-md border-f right col-lg-4 pb-4 pb-lg-0 order-1 order-sm-2"
           >
             <p class="text mt-2 section-text">
-              Si vous le souhaitez, nous privilégions les dons en espèces, ou
-              une contribution à l’organisation du mariage via notre liste de
-              souhaits, puisque nous vivons à l'étranger. Toute participation
-              est entièrement volontaire. Merci du fond du cœur pour votre amour
-              et votre soutien. Nous avons hâte de partager ce bonheur avec
-              vous!
-              <br>
-              <b>Cliquez sur offrir pour voir les moyens de nous offrir un cadeau.</b>
+              <%- slot('home.gift.text') %>
             </p>
-            
+
+            <div
+              class="border-strip"
+              data-img-slot="home.gift.strip"
+              data-img-var="--ls-strip-image"
+              data-img-value="<%= imgSrc('home.gift.strip') %>"
+              style="--ls-strip-image: url('<%= imgSrc('home.gift.strip') %>')"
+            ></div>
           </div>
         </div>
       </div>
@@ -122,11 +146,13 @@
       <div class="row mt-4 text-center">
         <div class="col">
           <p class="offer-cta mb-3">
-            Envie de faire plaisir aux mariés&nbsp;? Cliquez sur le bouton
-            ci-dessous pour nous offrir un cadeau.
+            <%- slot('home.gift.cta') %>
           </p>
           <a href="/give"
-            ><button class="btn fs-3 btn-dark give-btn">Offrir</button></a
+            ><button
+              class="btn fs-3 btn-dark give-btn"
+              data-color-slots="site.button.bg|site.button.text"
+            ><%- slot('home.gift.button') %></button></a
           >
         </div>
       </div>
@@ -136,7 +162,7 @@
 
     <div class="program-section">
       <div class="row text-center">
-        <h2 class="single-word">Programme</h2>
+        <h2 class="single-word"><%- slot('home.program.title') %></h2>
         <a class="anchor" id="program-anchor"></a>
       </div>
 
@@ -149,14 +175,13 @@
           <div class="container program-text">
             <div class="mx-2 row">
               <div class="col-5">
-                <h4 class="">Église</h4>
+                <h4 class=""><%- slot('home.program.item1.title') %></h4>
               </div>
             </div>
             <div class="mx-2 row">
               <div class="col-5">
                 <p class="">
-                  Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                  Alias odio,
+                  <%- slot('home.program.item1.text') %>
                 </p>
               </div>
             </div>
@@ -173,14 +198,13 @@
           <div class="container program-text">
             <div class="mx-2 row justify-content-end">
               <div class="col-5">
-                <h4 class="text-end">Mairie</h4>
+                <h4 class="text-end"><%- slot('home.program.item2.title') %></h4>
               </div>
             </div>
             <div class="mx-2 row justify-content-end">
               <div class="col-5">
                 <p class="text-end">
-                  Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                  Alias odio,
+                  <%- slot('home.program.item2.text') %>
                 </p>
               </div>
             </div>
@@ -197,14 +221,13 @@
           <div class="container program-text">
             <div class="mx-2 row">
               <div class="col-5">
-                <h4 class="">Réception</h4>
+                <h4 class=""><%- slot('home.program.item3.title') %></h4>
               </div>
             </div>
             <div class="mx-2 row">
               <div class="col-5">
                 <p class="">
-                  Lorem ipsum dolor sit amet, consectetur adipisicing elit.
-                  Alias odio, lore
+                  <%- slot('home.program.item3.text') %>
                 </p>
               </div>
             </div>
@@ -218,8 +241,8 @@
       <div class="container pt-4 left-text my-3">
         <div class="row section-title">
           <div class="col text-center mb-sm-4">
-            <h2 class="double-word">Notre Histoire</h2>
-            
+            <h2 class="double-word"><%- slot('home.story.title') %></h2>
+
           </div>
         </div>
 
@@ -228,13 +251,16 @@
         <div class="row justify-content-evenly align-items-end mx-auto">
           <div class="col-md pb-4 pb-lg-0 col-lg-4">
             <p class="text-align-left mt-2 section-text">
-              Tout a commencé en 2019 à l’université… pas vraiment le genre d’endroit où l’on s’attend à rencontrer l’amour de sa vie, et pourtant.
-              De rencontres en rencontres, quelque chose de particulier s’est installé. Une évidence discrète, un lien qui s’est construit sans faire de bruit.
-
+              <%- slot('home.story.text1') %>
             </p>
           </div>
           <div class="col-lg-6 border-v d-flex justify-content-center">
-            <img src="/img/couple-9.JPG" class="img-fluid couple-img" alt="" />
+            <img
+              src="<%= imgSrc('home.story.image1') %>"
+              data-img-slot="home.story.image1"
+              class="img-fluid couple-img"
+              alt=""
+            />
           </div>
 
           <!-- Right img text -->
@@ -246,8 +272,12 @@
             class="col-lg-6 d-flex justify-content-sm-center justify-content-lg-start border-v left order-2 order-sm-1"
           >
             <div style="position: relative; display: inline-block;">
-              <img src="/img/couple-7.JPG" class="img-fluid couple-img" alt="" />
-              <!-- <span style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-45deg); color: #fff; font-size: 1.5rem; font-weight: bold; white-space: nowrap; text-shadow: 0 0 4px rgba(0,0,0,0.8); pointer-events: none;" class="img-notice">Image must be updated</span> -->
+              <img
+                src="<%= imgSrc('home.story.image2') %>"
+                data-img-slot="home.story.image2"
+                class="img-fluid couple-img"
+                alt=""
+              />
             </div>
           </div>
 
@@ -255,8 +285,7 @@
             class="col-md  right col-lg-4 pb-4 pb-lg-0 order-1 order-sm-2"
           >
             <p class="text mt-2 section-text">
-            En mai 2019, nous avons fait le choix de nous écrire une vraie histoire. Et depuis, la vie nous a surtout offert ce qu’elle a de plus beau : de l’amour, des rires, de la complicité, et une façon bien à nous d’avancer ensemble.
-
+              <%- slot('home.story.text2') %>
             </p>
           </div>
         </div>
@@ -273,11 +302,16 @@
           <div class="row justify-content-evenly align-items-end mx-auto">
             <div class="col-md  pb-4 pb-lg-0 col-lg-4">
               <p class="text-align-left mt-2 section-text">
-                Aujourd’hui, sept ans plus tard, nous sommes là. Au début d’un “pour toujours” que nous avons choisi, ensemble.
+                <%- slot('home.story.text3') %>
               </p>
             </div>
             <div class="col-lg-6 border-v d-flex justify-content-center">
-              <img src="/img/couple-10.JPG" class="img-fluid couple-img" alt="" />
+              <img
+                src="<%= imgSrc('home.story.image3') %>"
+                data-img-slot="home.story.image3"
+                class="img-fluid couple-img"
+                alt=""
+              />
             </div>
         </div>
       
@@ -295,4 +329,8 @@
     integrity="sha384-FKyoEForCGlyvwx9Hj09JcYn3nv7wiPVlz7YYwJrWVcXK/BmnVDxM+D2scQbITxI"
     crossorigin="anonymous"
   ></script>
+
+  <% if (typeof editMode !== 'undefined' && editMode) { %>
+  <script defer src="/js/edit-mode.js"></script>
+  <% } %>
 </html>

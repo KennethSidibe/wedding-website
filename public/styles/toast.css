@@ -1,0 +1,144 @@
+/* The floating confirmation card.
+ *
+ * Used by the post-registration "Merci" card on the home page and by the
+ * "you left the editor open" notice on the admin dashboard. It lived in
+ * home.css until 2026-08-01; it moved here when the admin page needed it too,
+ * because a second copy of these rules would have drifted from the first.
+ * Loaded globally from header.ejs. The dark-mode overrides stay in theme.css.
+ *
+ * The 5s in the countdown animation below is duplicated as DISPLAY_DURATION in
+ * /js/register-toast.js. Change one, change the other.
+ */
+
+.register-toast {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    z-index: 1050;
+
+    width: min(88vw, 430px);
+    padding: 2.25rem 3rem 2.5rem;
+
+    background-color: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    border-radius: 26px;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
+    overflow: hidden;
+
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.94);
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.register-toast.is-visible {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.register-toast.is-leaving {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(0.96);
+}
+
+.register-toast-body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+}
+
+.register-toast-title {
+    font-family: "Pinyon Script", cursive;
+    font-weight: 700;
+    font-size: calc(2.2rem + 1vw);
+    line-height: 1.05;
+    color: #111;
+    margin-bottom: 0.75rem;
+}
+
+.register-toast-text {
+    font-family: "EB Garamond", serif;
+    font-weight: 400;
+    font-size: calc(0.95rem + 0.2vw);
+    line-height: 1.4;
+    color: rgba(0, 0, 0, 0.6);
+    margin-bottom: 0;
+    max-width: 28ch;
+}
+
+.register-toast-close {
+    position: absolute;
+    top: 0.9rem;
+    right: 1.1rem;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    padding: 0;
+
+    border: none;
+    border-radius: 50%;
+    background: none;
+    color: rgba(0, 0, 0, 0.4);
+
+    font-family: "Nunito", sans-serif;
+    font-size: 1.5rem;
+    font-weight: 300;
+    line-height: 1;
+    cursor: pointer;
+    transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.register-toast-close:hover,
+.register-toast-close:focus-visible {
+    color: #000;
+    background-color: rgba(0, 0, 0, 0.06);
+    outline: none;
+}
+
+.register-toast-progress {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+
+    width: 100%;
+    height: 4px;
+    background-color: rgba(0, 0, 0, 0.07);
+}
+
+.register-toast-progress-bar {
+    display: block;
+    width: 0;
+    height: 100%;
+    background-color: #5b57e8;
+    border-radius: 0 4px 4px 0;
+}
+
+.register-toast.is-visible .register-toast-progress-bar {
+    animation: register-toast-countdown 5s linear forwards;
+}
+
+@keyframes register-toast-countdown {
+    from {
+        width: 0;
+    }
+    to {
+        width: 100%;
+    }
+}
+
+@media (max-width: 500px) {
+    .register-toast {
+        padding: 2rem 1.75rem 2.25rem;
+        border-radius: 22px;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .register-toast {
+        transition-duration: 0.01ms;
+    }
+}

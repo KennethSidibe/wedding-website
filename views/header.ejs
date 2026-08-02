@@ -19,6 +19,7 @@
     <!-- Bootstrap -->
 
     <!-- Theme -->
+    <link rel="stylesheet" href="/styles/toast.css" />
     <link rel="stylesheet" href="/styles/theme.css" />
     <script>
       // Runs before first paint so the page never flashes the wrong theme.
@@ -59,6 +60,29 @@
     </script>
     <script defer src="/js/theme-toggle.js"></script>
     <!-- Theme -->
+
+    <!-- Editable colours and photos -->
+    <%
+      // The admin-editable colours and the hero photo are published as CSS
+      // custom properties, so the stylesheets stay the only place that decides
+      // *how* anything looks — the admin supplies a value, never a rule. Values
+      // are validated server-side (#rrggbb, or a path under /img or /uploads),
+      // which is why they can be written raw here.
+    %>
+    <% if (typeof contentVars !== 'undefined') { %>
+    <style>
+      :root {
+        <% contentVars.forEach(function (variable) { %>
+        <%- variable.cssVar %>: <%- variable.value %>;
+        <% }); %>
+      }
+    </style>
+    <% } %>
+
+    <% if (typeof editMode !== 'undefined' && editMode) { %>
+    <link rel="stylesheet" href="/styles/edit-mode.css" />
+    <% } %>
+    <!-- Editable colours and photos -->
 
     <!-- Styles -->
 

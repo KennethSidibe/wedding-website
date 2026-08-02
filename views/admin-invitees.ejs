@@ -11,7 +11,59 @@
 
     <%- include('navbar.ejs') %>
 
-    <div class="container invitees-list my-3">
+    <%
+      // Shown when the admin left the editor with the back button instead of
+      // pressing Quitter. It lives on /admin, which is behind requireAdmin, so
+      // it is only ever rendered for the logged-in admin — it says nothing to
+      // anyone else, which is why it is here and not on the public page.
+    %>
+    <% if (typeof leftEditorOpen !== 'undefined' && leftEditorOpen) { %>
+    <div id="editorNotice" class="register-toast" role="status" aria-live="polite">
+      <button type="button" id="editorNoticeClose" class="register-toast-close" aria-label="Fermer">
+        &times;
+      </button>
+
+      <div class="register-toast-body">
+        <h3 class="register-toast-title">Mode édition fermé</h3>
+        <p class="register-toast-text">
+          Vous avez quitté l'éditeur sans cliquer sur «&nbsp;Quitter&nbsp;». Il a
+          été fermé pour vous. Toute modification non enregistrée a été perdue&nbsp;;
+          reprenez avec le bouton ci-dessous.
+        </p>
+      </div>
+
+      <div class="register-toast-progress">
+        <span class="register-toast-progress-bar"></span>
+      </div>
+    </div>
+    <% } %>
+
+    <div class="container admin-width mt-4">
+      <%
+        // /admin/edit, not /?edit=1 — that route is what opens the editor
+        // session. Linking straight to the query string would land on the
+        // ordinary public page.
+      %>
+      <a
+        href="/admin/edit"
+        class="edit-site-card"
+        style="background-image: linear-gradient(rgba(15, 23, 42, 0.35), rgba(15, 23, 42, 0.72)), url('<%= imgSrc('home.hero.image') %>');"
+      >
+        <span class="edit-site-badge" aria-hidden="true">
+          <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/>
+          </svg>
+        </span>
+        <span class="edit-site-text">
+          <span class="edit-site-title">Modifier les pages du site</span>
+          <span class="edit-site-sub">
+            Changez les textes, les photos et les couleurs directement sur le site
+          </span>
+        </span>
+      </a>
+    </div>
+
+    <div class="container invitees-list admin-width my-3">
       <div class="row section-title">
         <div class="col text-center mb-sm-4">
           <h2 class="double-word">Nos Invités</h2>
@@ -104,6 +156,8 @@
     <%- include("footer.ejs") %>
 
   </body>
+
+  <script defer src="/js/register-toast.js"></script>
 
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"

@@ -1,0 +1,873 @@
+/* Edit mode chrome.
+ *
+ * Only loaded when an authenticated admin opens a page with ?edit=1, so none
+ * of this can affect what a guest sees.
+ *
+ * Design rule for this file: nothing here may change the geometry of the site
+ * underneath it. The bar is fixed and offsets the page with body padding, the
+ * editable markers use `outline` (which does not occupy space, unlike border),
+ * and the photo overlay is a fixed-position element that is never inserted
+ * into the page's own DOM. That is what makes it impossible for the editor to
+ * disturb the layout it is sitting on.
+ *
+ * --ls-edit-offset is measured and written by /js/edit-mode.js so the offset
+ * always matches the real height of the bar, however the buttons wrap. The
+ * value below is only the pre-script fallback.
+ */
+
+:root {
+    --ls-edit-offset: 210px;
+    --ls-edit-blue: #2563eb;
+    --ls-edit-blue-dark: #1d4ed8;
+    --ls-edit-amber: #b45309;
+    --ls-edit-red: #dc2626;
+
+    /* The editor chrome sits above every layer the site itself uses (the
+       sticky navbar is 10, the registration card is 1050). These are near the
+       top of the 32-bit stacking range so nothing added to the site later can
+       accidentally outrank them; they keep a defined order among themselves. */
+    --ls-z-hover: 2147483000;   /* photo / button hover controls */
+    --ls-z-bar: 2147483200;     /* the edit bar */
+    --ls-z-picker: 2147483400;  /* colour picker, above the bar */
+    --ls-z-toast: 2147483600;   /* toasts and the counter */
+    --ls-z-modal: 2147483647;   /* the confirmation dialog, above everything */
+}
+
+body.ls-edit-mode {
+    padding-top: var(--ls-edit-offset);
+}
+
+/* The navbar is `position: sticky` on the live site. Two fixed/sticky bars
+   competing for the top of the viewport is what made the navbar appear to
+   scroll *through* the edit card: offsetting its `top` only moved the collision,
+   it did not remove it. In edit mode the navbar goes back to being part of the
+   flow and simply scrolls away, leaving the edit bar as the only thing pinned
+   to the top. Nothing is lost — the navbar is for browsing the site, not for
+   editing it — and because this rule lives in edit-mode.css, which is only
+   loaded with ?edit=1, sticky behaviour returns by itself on the real site.
+
+   `relative`, not `static`: the theme toggle is `position: absolute` inside
+   `.m-nav` and needs it to stay a positioned ancestor. Making it static would
+   drop the toggle onto the viewport and land it on top of the edit bar. */
+body.ls-edit-mode .m-nav {
+    position: relative;
+    top: auto;
+}
+
+/* ------------------------------------------------------------------ the bar */
+
+.ls-edit-bar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: var(--ls-z-bar);
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+
+    padding: 0.9rem 1rem 1rem;
+    font-family: "Nunito", system-ui, sans-serif;
+
+    background: linear-gradient(180deg, rgba(15, 23, 42, 0.06), rgba(15, 23, 42, 0));
+    pointer-events: none;
+}
+
+.ls-edit-bar > * {
+    pointer-events: auto;
+}
+
+/* The blue circle: the single strongest signal that this is not the live
+   site being browsed, but the site being edited. */
+.ls-edit-badge {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 62px;
+    height: 62px;
+    margin-bottom: -31px;
+    z-index: 1;
+
+    color: #fff;
+    background: var(--ls-edit-blue);
+    border: 4px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 10px 24px rgba(37, 99, 235, 0.4);
+}
+
+.ls-edit-panel {
+    width: 60vw;
+    padding: 2.4rem 2rem 1.1rem;
+
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    border-radius: 28px;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.18);
+}
+
+/* Three columns: an empty one, the title, and the page badge. Equal outer
+   columns are what centre the title on the panel rather than on the space the
+   badge happens to leave. */
+.ls-edit-head {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 1rem;
+    align-items: center;
+}
+
+.ls-edit-title {
+    margin: 0;
+    font-family: inherit;
+    font-size: 1.9rem;
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.01em;
+    text-align: center;
+    color: #0f172a;
+}
+
+.ls-edit-page-name {
+    justify-self: end;
+
+    padding: 0.3rem 1rem;
+
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--ls-edit-blue-dark);
+    background: rgba(37, 99, 235, 0.12);
+    border-radius: 999px;
+    white-space: nowrap;
+}
+
+.ls-edit-hint {
+    margin: 0.45rem auto 0;
+    max-width: 44rem;
+    font-size: 0.82rem;
+    line-height: 1.35;
+    text-align: center;
+    color: #475569;
+}
+
+/* Well clear of the title and the footer: these three are the only committing
+   actions in the editor and should not be mistaken for part of the heading. */
+.ls-edit-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.7rem;
+    align-items: center;
+    justify-content: center;
+
+    margin-top: 1.8rem;
+    margin-bottom: 1.6rem;
+}
+
+.ls-edit-status {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #64748b;
+    white-space: nowrap;
+}
+
+.ls-edit-status.is-dirty {
+    color: var(--ls-edit-amber);
+}
+
+.ls-edit-btn {
+    padding: 0.5rem 1.05rem;
+
+    font-family: inherit;
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #0f172a;
+
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background-color 0.15s ease, border-color 0.15s ease, opacity 0.15s ease;
+}
+
+.ls-edit-btn:hover:not(:disabled) {
+    background: #f1f5f9;
+}
+
+.ls-edit-btn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.ls-edit-btn-primary {
+    color: #fff;
+    background: var(--ls-edit-blue);
+    border-color: var(--ls-edit-blue);
+}
+
+.ls-edit-btn-primary:hover:not(:disabled) {
+    background: var(--ls-edit-blue-dark);
+    border-color: var(--ls-edit-blue-dark);
+}
+
+.ls-edit-btn-ghost {
+    color: #475569;
+    border-color: transparent;
+    background: transparent;
+}
+
+.ls-edit-btn.is-active {
+    color: var(--ls-edit-blue-dark);
+    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(37, 99, 235, 0.35);
+}
+
+.ls-edit-panel-foot {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    align-items: center;
+    justify-content: space-between;
+
+    padding-top: 0.7rem;
+    border-top: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.ls-edit-pages {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    align-items: center;
+    font-size: 0.82rem;
+    color: #64748b;
+}
+
+.ls-edit-pages-label {
+    font-weight: 700;
+}
+
+.ls-edit-page-link {
+    padding: 0.2rem 0.7rem;
+    font-weight: 600;
+    color: #334155;
+    text-decoration: none;
+    border: 1px solid rgba(15, 23, 42, 0.14);
+    border-radius: 999px;
+}
+
+.ls-edit-page-link:hover {
+    background: #f1f5f9;
+    text-decoration: none;
+}
+
+.ls-edit-page-link.is-current {
+    color: #fff;
+    background: #334155;
+    border-color: #334155;
+}
+
+.ls-edit-link-btn {
+    padding: 0;
+    font-family: inherit;
+    font-size: 0.78rem;
+    color: #64748b;
+    background: none;
+    border: none;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+.ls-edit-link-btn:hover {
+    color: var(--ls-edit-red);
+}
+
+/* --------------------------------------------------------- editable fields */
+
+/* `outline` and not `border`: an outline is painted outside the box without
+   taking part in layout, so marking a field editable cannot reflow the page. */
+.ls-slot {
+    outline: 1px dashed rgba(37, 99, 235, 0.55);
+    outline-offset: 3px;
+    border-radius: 2px;
+    cursor: text;
+    transition: background-color 0.15s ease, outline-color 0.15s ease;
+}
+
+.ls-slot:hover {
+    background-color: rgba(37, 99, 235, 0.08);
+}
+
+.ls-slot:focus {
+    outline: 2px solid var(--ls-edit-blue);
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+.ls-slot.is-dirty {
+    outline-color: var(--ls-edit-amber);
+    background-color: rgba(180, 83, 9, 0.1);
+}
+
+.ls-slot.is-at-limit {
+    outline-color: var(--ls-edit-red);
+    background-color: rgba(220, 38, 38, 0.12);
+}
+
+/* ------------------------------------------------------------ photo overlay */
+
+/* Content-sized and centred on the photo, never covering it. A full-bleed
+   cover would swallow hover and clicks on whatever sits on top of the image —
+   the hero dates are editable text laid over the hero photo. */
+.ls-image-overlay {
+    position: fixed;
+    z-index: var(--ls-z-hover);
+
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    align-items: center;
+    justify-content: center;
+
+    padding: 0.5rem;
+
+    background: rgba(15, 23, 42, 0.72);
+    border-radius: 14px;
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.35);
+}
+
+/* Photos carry the same permanent dashed outline as the text, so every
+   changeable thing on the page looks changeable without having to be
+   discovered by hovering. Outline and box-shadow are both outside the layout,
+   so neither can move anything. */
+body.ls-edit-mode [data-img-slot] {
+    outline: 2px dashed rgba(37, 99, 235, 0.55);
+    outline-offset: 3px;
+    cursor: pointer;
+    transition: outline-color 0.15s ease, box-shadow 0.2s ease;
+}
+
+.ls-img-hover {
+    outline: 2px dashed var(--ls-edit-blue);
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.22), 0 0 26px 6px rgba(37, 99, 235, 0.45);
+}
+
+body.ls-edit-mode [data-img-slot].is-dirty {
+    outline-color: var(--ls-edit-amber);
+}
+
+.ls-image-btn {
+    touch-action: manipulation;
+    display: inline-flex;
+    gap: 0.45rem;
+    align-items: center;
+
+    padding: 0.5rem 1rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+
+    background: var(--ls-edit-blue);
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.ls-image-btn:hover {
+    background: var(--ls-edit-blue-dark);
+}
+
+.ls-image-btn-ghost {
+    padding: 0.3rem 0.85rem;
+    font-size: 0.78rem;
+    background: rgba(255, 255, 255, 0.9);
+    color: #0f172a;
+}
+
+.ls-image-btn-ghost:hover {
+    background: #fff;
+}
+
+.ls-image-overlay.is-busy .ls-image-btn {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+/* ---------------------------------------------------- counter and feedback */
+
+.ls-slot-counter {
+    position: fixed;
+    z-index: var(--ls-z-toast);
+
+    padding: 0.15rem 0.5rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    color: #fff;
+
+    background: var(--ls-edit-amber);
+    border-radius: 999px;
+    pointer-events: none;
+}
+
+.ls-slot-counter.is-at-limit {
+    background: var(--ls-edit-red);
+}
+
+.ls-edit-toast {
+    position: fixed;
+    bottom: 1.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: var(--ls-z-toast);
+
+    max-width: min(90vw, 30rem);
+    padding: 0.75rem 1.4rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    text-align: center;
+    color: #fff;
+
+    background: #0f172a;
+    border-radius: 999px;
+    box-shadow: 0 12px 30px rgba(15, 23, 42, 0.3);
+}
+
+.ls-edit-toast.is-error {
+    background: var(--ls-edit-red);
+}
+
+.ls-edit-toast.is-success {
+    background: #047857;
+}
+
+/* -------------------------------------------------------------- dark theme */
+
+/* The editor chrome stays light in both themes on purpose: it is a tool, not
+   part of the site, and a constant appearance makes it obvious which pixels
+   belong to the wedding site and which belong to the editor. Only the few
+   places that would otherwise vanish are adjusted. */
+html[data-theme="dark"] .ls-edit-bar {
+    background: linear-gradient(180deg, rgba(0, 0, 0, 0.35), rgba(0, 0, 0, 0));
+}
+
+html[data-theme="dark"] .ls-slot:hover {
+    background-color: rgba(96, 165, 250, 0.18);
+}
+
+html[data-theme="dark"] .ls-slot {
+    outline-color: rgba(96, 165, 250, 0.7);
+}
+
+/* ------------------------------------------------------------- small screens */
+
+@media (max-width: 720px) {
+    .ls-edit-panel {
+        padding: 2.2rem 1rem 0.9rem;
+        border-radius: 22px;
+    }
+
+    .ls-edit-hint {
+        display: none;
+    }
+
+    .ls-edit-actions {
+        width: 100%;
+    }
+
+    .ls-edit-btn {
+        flex: 1 1 auto;
+        padding: 0.5rem 0.7rem;
+        font-size: 0.82rem;
+    }
+
+    .ls-edit-badge {
+        width: 52px;
+        height: 52px;
+        margin-bottom: -26px;
+    }
+}
+
+#lsEditResetColors {
+    margin-left: auto;
+    align-self: center;
+}
+
+/* ----------------------------------------------------------- button controls */
+
+/* Buttons get their control anchored *above* them rather than centred on them:
+   the button label is itself editable text, and a centred control would cover
+   the very thing being edited. */
+.ls-button-overlay {
+    position: fixed;
+    z-index: var(--ls-z-hover);
+
+    display: flex;
+    gap: 0.3rem;
+    align-items: center;
+
+    padding: 0.3rem;
+
+    background: rgba(15, 23, 42, 0.86);
+    border-radius: 999px;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.4);
+}
+
+.ls-button-chip {
+    touch-action: manipulation;
+    display: inline-flex;
+    gap: 0.4rem;
+    align-items: center;
+
+    padding: 0.3rem 0.75rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #fff;
+
+    background: transparent;
+    border: none;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.ls-button-chip:hover {
+    background: rgba(255, 255, 255, 0.16);
+}
+
+.ls-button-chip-dot {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255, 255, 255, 0.85);
+    border-radius: 50%;
+}
+
+/* Buttons are marked as editable the same way photos and text are. */
+body.ls-edit-mode [data-color-slots] {
+    outline: 2px dashed rgba(37, 99, 235, 0.55);
+    outline-offset: 4px;
+    transition: outline-color 0.15s ease, box-shadow 0.2s ease;
+}
+
+.ls-color-hover {
+    outline: 2px dashed var(--ls-edit-blue) !important;
+    box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.22), 0 0 26px 6px rgba(37, 99, 235, 0.45);
+}
+
+/* ------------------------------------------------------------ colour picker */
+
+.ls-color-picker {
+    position: fixed;
+    z-index: var(--ls-z-picker);
+
+    width: 244px;
+    padding: 0.85rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    background: #fff;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 16px;
+    box-shadow: 0 18px 44px rgba(15, 23, 42, 0.28);
+}
+
+.ls-color-picker-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.6rem;
+}
+
+.ls-color-picker-label {
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ls-color-picker-close {
+    padding: 0 0.25rem;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: #64748b;
+    background: none;
+    border: none;
+    cursor: pointer;
+}
+
+/* Saturation across, value down — the standard square every design tool uses,
+   built from two stacked gradients so it needs no canvas and no library. */
+.ls-color-area {
+    position: relative;
+    width: 100%;
+    height: 132px;
+    border-radius: 10px;
+    cursor: crosshair;
+    /* Without this the browser claims a finger drag as a scroll gesture and
+       fires pointercancel, so dragging scrolled the page instead of picking a
+       colour. The picker owns every gesture that starts inside it. */
+    touch-action: none;
+    background:
+        linear-gradient(to top, #000, rgba(0, 0, 0, 0)),
+        linear-gradient(to right, #fff, var(--ls-picker-hue, #ff0000));
+}
+
+.ls-color-thumb {
+    position: absolute;
+    width: 14px;
+    height: 14px;
+    margin: -7px 0 0 -7px;
+
+    border: 2px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.ls-color-hue {
+    position: relative;
+    height: 14px;
+    margin-top: 0.7rem;
+    border-radius: 999px;
+    cursor: pointer;
+    touch-action: none; /* see .ls-color-area */
+    background: linear-gradient(
+        to right,
+        #f00 0%, #ff0 17%, #0f0 33%, #0ff 50%, #00f 67%, #f0f 83%, #f00 100%
+    );
+}
+
+.ls-color-hue-thumb {
+    position: absolute;
+    top: 50%;
+    width: 16px;
+    height: 16px;
+    margin: -8px 0 0 -8px;
+
+    background: #fff;
+    border-radius: 50%;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
+    pointer-events: none;
+}
+
+.ls-color-swatches {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.35rem;
+    margin-top: 0.75rem;
+}
+
+.ls-color-swatch {
+    touch-action: manipulation;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.ls-color-foot {
+    display: flex;
+    gap: 0.45rem;
+    align-items: center;
+    margin-top: 0.75rem;
+}
+
+.ls-color-preview {
+    width: 26px;
+    height: 26px;
+    flex: 0 0 auto;
+    border: 1px solid rgba(15, 23, 42, 0.15);
+    border-radius: 7px;
+}
+
+.ls-color-hex {
+    width: 100%;
+    min-width: 0;
+    padding: 0.3rem 0.5rem;
+
+    font-family: "JetBrains Mono", monospace;
+    font-size: 0.78rem;
+    color: #0f172a;
+
+    border: 1px solid rgba(15, 23, 42, 0.18);
+    border-radius: 7px;
+}
+
+@media (max-width: 900px) {
+    .ls-edit-panel {
+        width: 94vw;
+    }
+
+    .ls-edit-title {
+        font-size: 1.4rem;
+    }
+
+    .ls-edit-page-name {
+        font-size: 0.85rem;
+    }
+}
+
+/* ------------------------------------------------------- confirmation dialog */
+
+/* Replaces window.confirm() for Quitter, Annuler and Rétablir. The native
+   dialog cannot be styled, has no room to spell out consequences, and in some
+   browsers appears as a thin strip at the top of the window that is easy to
+   dismiss without reading — a poor fit for actions that log the admin out or
+   discard their work. */
+.ls-confirm {
+    position: fixed;
+    inset: 0;
+    z-index: var(--ls-z-modal);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 1rem;
+}
+
+.ls-confirm-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+}
+
+.ls-confirm-card {
+    position: relative;
+
+    width: min(100%, 470px);
+    padding: 1.9rem 1.9rem 1.5rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    text-align: center;
+
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 26px 70px rgba(15, 23, 42, 0.4);
+
+    animation: ls-confirm-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@keyframes ls-confirm-in {
+    from { opacity: 0; transform: translateY(10px) scale(0.97); }
+    to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-confirm-card { animation-duration: 0.01ms; }
+}
+
+.ls-confirm-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 54px;
+    height: 54px;
+    margin: 0 auto 1rem;
+
+    color: var(--ls-edit-amber);
+    background: rgba(180, 83, 9, 0.12);
+    border-radius: 50%;
+}
+
+.ls-confirm.is-danger .ls-confirm-icon {
+    color: var(--ls-edit-red);
+    background: rgba(220, 38, 38, 0.12);
+}
+
+.ls-confirm-title {
+    margin: 0 0 0.5rem;
+    font-size: 1.32rem;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.ls-confirm-text {
+    margin: 0;
+    font-size: 0.93rem;
+    line-height: 1.45;
+    color: #475569;
+}
+
+/* The specific consequences, one per line, so they are read rather than
+   skimmed as a paragraph. */
+.ls-confirm-points {
+    margin: 1.1rem 0 0;
+    padding: 0.85rem 1rem;
+    list-style: none;
+
+    text-align: left;
+    background: #f8fafc;
+    border: 1px solid rgba(15, 23, 42, 0.08);
+    border-radius: 14px;
+}
+
+.ls-confirm-points li {
+    position: relative;
+    padding-left: 1.35rem;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: #334155;
+}
+
+.ls-confirm-points li + li {
+    margin-top: 0.4rem;
+}
+
+.ls-confirm-points li::before {
+    content: "";
+    position: absolute;
+    top: 0.55em;
+    left: 0.35rem;
+
+    width: 6px;
+    height: 6px;
+    background: currentColor;
+    border-radius: 50%;
+    opacity: 0.45;
+}
+
+.ls-confirm-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    margin-top: 1.5rem;
+}
+
+.ls-confirm-actions .ls-edit-btn {
+    flex: 1 1 auto;
+    min-width: 9rem;
+    padding-block: 0.6rem;
+}
+
+.ls-confirm.is-danger .ls-edit-btn-primary {
+    background: var(--ls-edit-red);
+    border-color: var(--ls-edit-red);
+}
+
+.ls-confirm.is-danger .ls-edit-btn-primary:hover:not(:disabled) {
+    background: #b91c1c;
+    border-color: #b91c1c;
+}
+
+/* The page behind must not scroll while the dialog is up. */
+body.ls-confirm-open {
+    overflow: hidden;
+}
+
+@media (max-width: 480px) {
+    .ls-confirm-card {
+        padding: 1.5rem 1.25rem 1.25rem;
+        border-radius: 20px;
+    }
+
+    .ls-confirm-actions .ls-edit-btn {
+        flex-basis: 100%;
+    }
+}

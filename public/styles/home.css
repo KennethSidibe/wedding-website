@@ -4,6 +4,24 @@ html,body,footer {
     overflow-x: clip;
 }
 
+/* Long unbroken strings — a URL, a hashtag, or simply someone typing without
+   spaces — have no break opportunity, so the browser lets them run straight out
+   of their column and over the neighbouring content. That was visible in the
+   Programme timeline and the Notre Histoire paragraphs. `break-word` only kicks
+   in for words that cannot otherwise fit, so ordinary copy still wraps at
+   spaces exactly as before.
+   This is a fix to the site itself, not to the editor: the same overflow could
+   always have been produced by editing the template. */
+p,
+h2,
+h3,
+h4,
+.section-text,
+.program-text,
+.offer-cta {
+    overflow-wrap: break-word;
+}
+
 .oranienbaum-regular {
   font-family: "Oranienbaum", serif;
   font-weight: 400;
@@ -172,13 +190,17 @@ h4 {
     }
 }
 
-.border-f::after {
+/* This strip used to be a `.border-f::after` pseudo-element. A pseudo-element
+   cannot be hovered, measured or given a data attribute, so it could not be
+   made editable — it is now a real `.border-strip` div, the last child of
+   `.border-f`, carrying the same declarations in the same place so it renders
+   identically. It is hidden below 1000px exactly as the old `content: ""`
+   inside the media query used to hide it. */
+.border-strip {
+    display: none;
 
     @media (min-width:1000px) {
-        content: "";
-
-        z-index: -1;
-        background-image: url('/img/main-img.jpg');
+        background-image: var(--ls-strip-image, url('/img/main-img.jpg'));
         width: 100%;
         height: 100px;
         display: block;
@@ -193,12 +215,10 @@ h4 {
         margin-top: 2rem;
         margin-bottom: 3rem;
     }
-
-
 }
 
-.border-f.right::after {
-    background-image: url("/img/couple-1.JPG");
+.border-f.right .border-strip {
+    background-image: var(--ls-strip-image, url("/img/couple-1.JPG"));
     background-position: 50% 40%;
 }
 
@@ -343,20 +363,28 @@ p {
 }
 
 
+/* --ls-btn-bg and --ls-btn-text are published from the database in header.ejs
+   and are editable from the page editor. The literals here are the fallback,
+   and they must stay equal to the defaults in constants/content.slots.js. */
 .give-btn {
     font-size: calc(1rem + 0.5vw);
     border-radius: 0.5rem;
     padding-inline: 4rem;
-    background-color: #7B1B38;
-    border-color: #7B1B38;
+    background-color: var(--ls-btn-bg, #7B1B38);
+    border-color: var(--ls-btn-bg, #7B1B38);
+    color: var(--ls-btn-text, #ffffff);
     filter: drop-shadow(2px 2px 3px #00000068);
 }
 
+/* Darkened from whatever the current colour is, rather than a second hardcoded
+   value — otherwise the hover state would ignore the admin's choice. */
 .give-btn:hover,
 .give-btn:focus,
 .give-btn:active {
-    background-color: #591427;
-    border-color: #591427;
+    background-color: var(--ls-btn-bg, #7B1B38);
+    border-color: var(--ls-btn-bg, #7B1B38);
+    color: var(--ls-btn-text, #ffffff);
+    filter: drop-shadow(2px 2px 3px #00000068) brightness(0.85);
 }
 
 .vertical-line {
@@ -523,7 +551,8 @@ p {
     max-height: 90vh;
     height: 80vh;
     margin: auto 3em;
-    background-image: url("/img/main-img.jpg");
+    /* Editable from the page editor; see the note on .give-btn. */
+    background-image: var(--ls-hero-image, url("/img/main-img.jpg"));
     background-size: cover;
     background-position: center;
     
@@ -646,139 +675,4 @@ p {
 .location-title {
     font-family: "Pinyon Script", cursive;
     white-space: nowrap;
-}
-
-/* Registration confirmation card */
-
-.register-toast {
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    z-index: 1050;
-
-    width: min(88vw, 430px);
-    padding: 2.25rem 3rem 2.5rem;
-
-    background-color: #fff;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    border-radius: 26px;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.22);
-    overflow: hidden;
-
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.94);
-    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(0.2, 0.8, 0.3, 1);
-}
-
-.register-toast.is-visible {
-    opacity: 1;
-    transform: translate(-50%, -50%) scale(1);
-}
-
-.register-toast.is-leaving {
-    opacity: 0;
-    transform: translate(-50%, -50%) scale(0.96);
-}
-
-.register-toast-body {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    text-align: center;
-}
-
-.register-toast-title {
-    font-family: "Pinyon Script", cursive;
-    font-weight: 700;
-    font-size: calc(2.2rem + 1vw);
-    line-height: 1.05;
-    color: #111;
-    margin-bottom: 0.75rem;
-}
-
-.register-toast-text {
-    font-family: "EB Garamond", serif;
-    font-weight: 400;
-    font-size: calc(0.95rem + 0.2vw);
-    line-height: 1.4;
-    color: rgba(0, 0, 0, 0.6);
-    margin-bottom: 0;
-    max-width: 28ch;
-}
-
-.register-toast-close {
-    position: absolute;
-    top: 0.9rem;
-    right: 1.1rem;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 1.75rem;
-    height: 1.75rem;
-    padding: 0;
-
-    border: none;
-    border-radius: 50%;
-    background: none;
-    color: rgba(0, 0, 0, 0.4);
-
-    font-family: "Nunito", sans-serif;
-    font-size: 1.5rem;
-    font-weight: 300;
-    line-height: 1;
-    cursor: pointer;
-    transition: color 0.2s ease, background-color 0.2s ease;
-}
-
-.register-toast-close:hover,
-.register-toast-close:focus-visible {
-    color: #000;
-    background-color: rgba(0, 0, 0, 0.06);
-    outline: none;
-}
-
-.register-toast-progress {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-
-    width: 100%;
-    height: 4px;
-    background-color: rgba(0, 0, 0, 0.07);
-}
-
-.register-toast-progress-bar {
-    display: block;
-    width: 0;
-    height: 100%;
-    background-color: #5b57e8;
-    border-radius: 0 4px 4px 0;
-}
-
-.register-toast.is-visible .register-toast-progress-bar {
-    animation: register-toast-countdown 5s linear forwards;
-}
-
-@keyframes register-toast-countdown {
-    from {
-        width: 0;
-    }
-    to {
-        width: 100%;
-    }
-}
-
-@media (max-width: 500px) {
-    .register-toast {
-        padding: 2rem 1.75rem 2.25rem;
-        border-radius: 22px;
-    }
-}
-
-@media (prefers-reduced-motion: reduce) {
-    .register-toast {
-        transition-duration: 0.01ms;
-    }
 }

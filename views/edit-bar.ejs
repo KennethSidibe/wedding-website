@@ -1,0 +1,156 @@
+<%
+  // The editor's own UI. It is only ever included from inside an
+  // `if (editMode)` guard, so none of this markup reaches a visitor.
+  //
+  // Everything here is chrome: it is position: fixed and adds a body class for
+  // the offset, so it cannot participate in the page's layout and therefore
+  // cannot disturb the design it is sitting on top of.
+%>
+<div
+  id="lsEditBar"
+  class="ls-edit-bar"
+  data-csrf="<%= csrfToken %>"
+  data-page="<%= editPage %>"
+>
+  <!-- The blue circle: the "you are in edit mode" marker. -->
+  <div class="ls-edit-badge" aria-hidden="true">
+    <svg xmlns="http://www.w3.org/2000/svg" width="30" height="30" viewBox="0 0 16 16" fill="currentColor">
+      <path d="M12.146.146a.5.5 0 0 1 .708 0l3 3a.5.5 0 0 1 0 .708l-10 10a.5.5 0 0 1-.168.11l-5 2a.5.5 0 0 1-.65-.65l2-5a.5.5 0 0 1 .11-.168zM11.207 2.5 13.5 4.793 14.793 3.5 12.5 1.207zm1.586 3L10.5 3.207 4 9.707V10h.5a.5.5 0 0 1 .5.5v.5h.5a.5.5 0 0 1 .5.5v.5h.293zm-9.761 5.175-.106.106-1.528 3.821 3.821-1.528.106-.106A.5.5 0 0 1 5 12.5V12h-.5a.5.5 0 0 1-.5-.5V11h-.5a.5.5 0 0 1-.468-.325"/>
+    </svg>
+  </div>
+
+  <div class="ls-edit-panel">
+
+    <!-- Three columns so the title is centred on the panel rather than on the
+         space left over by the page badge. -->
+    <div class="ls-edit-head">
+      <span class="ls-edit-head-spacer" aria-hidden="true"></span>
+      <h2 class="ls-edit-title">Mode édition</h2>
+      <span class="ls-edit-page-name"><%= editPageLabel %></span>
+    </div>
+
+    <p class="ls-edit-hint">
+      Cliquez sur un texte pour le modifier, survolez une photo ou un bouton
+      pour le changer. Rien n'est publié tant que vous n'avez pas enregistré.
+    </p>
+
+    <div class="ls-edit-actions">
+      <button type="button" id="lsEditSave" class="ls-edit-btn ls-edit-btn-primary" disabled>
+        Enregistrer
+      </button>
+
+      <button type="button" id="lsEditDiscard" class="ls-edit-btn" disabled>
+        Annuler
+      </button>
+
+      <button type="button" id="lsEditExit" class="ls-edit-btn ls-edit-btn-ghost">
+        Quitter
+      </button>
+    </div>
+
+    <div class="ls-edit-panel-foot">
+      <div class="ls-edit-pages">
+        <span class="ls-edit-pages-label">Pages&nbsp;:</span>
+        <a href="/?edit=1" class="ls-edit-page-link <%= editPage === 'home' ? 'is-current' : '' %>" data-edit-link>Accueil</a>
+        <a href="/give?edit=1" class="ls-edit-page-link <%= editPage === 'give' ? 'is-current' : '' %>" data-edit-link>Offrir</a>
+      </div>
+
+      <span id="lsEditStatus" class="ls-edit-status">Aucune modification</span>
+
+      <button type="button" id="lsEditReset" class="ls-edit-link-btn">
+        Rétablir cette page
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- The colour slots, so the picker can resolve a slot key to its label, its
+     CSS variable and its current value without a round trip. -->
+<script type="application/json" id="lsColorSlots"><%- JSON.stringify(editableColors) %></script>
+
+<!-- Injected by the editor and positioned over whichever photo is hovered.
+     It is fixed-position and never inserted into the page's own DOM, so an
+     image slot's markup and layout are untouched by the editor. -->
+<div id="lsImageOverlay" class="ls-image-overlay" hidden>
+  <button type="button" class="ls-image-btn" id="lsImageChange">
+    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+      <path d="M15 12a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1h1.172a3 3 0 0 0 2.12-.879l.83-.828A1 1 0 0 1 6.828 3h2.344a1 1 0 0 1 .707.293l.828.828A3 3 0 0 0 12.828 5H14a1 1 0 0 1 1 1zM2 4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2h-1.172a2 2 0 0 1-1.414-.586l-.828-.828A2 2 0 0 0 9.172 2H6.828a2 2 0 0 0-1.414.586l-.828.828A2 2 0 0 1 3.172 4z"/>
+      <path d="M8 11a2.5 2.5 0 1 1 0-5 2.5 2.5 0 0 1 0 5m0 1a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7"/>
+    </svg>
+    Changer la photo
+  </button>
+  <button type="button" class="ls-image-btn ls-image-btn-ghost" id="lsImageReset" hidden>
+    Annuler ce changement
+  </button>
+</div>
+
+<!-- The same idea for buttons, but anchored above rather than centred, because
+     a control centred on a button would cover the label being edited. -->
+<div id="lsButtonOverlay" class="ls-button-overlay" hidden></div>
+
+<!-- Canva-style colour picker: saturation/value square, hue slider, swatches
+     and a hex field. Anchored to whatever opened it. -->
+<div id="lsColorPicker" class="ls-color-picker" hidden>
+  <div class="ls-color-picker-head">
+    <span id="lsColorPickerLabel" class="ls-color-picker-label"></span>
+    <button type="button" id="lsColorPickerClose" class="ls-color-picker-close" aria-label="Fermer">&times;</button>
+  </div>
+
+  <div id="lsColorArea" class="ls-color-area">
+    <div id="lsColorAreaThumb" class="ls-color-thumb"></div>
+  </div>
+
+  <div id="lsColorHue" class="ls-color-hue">
+    <div id="lsColorHueThumb" class="ls-color-hue-thumb"></div>
+  </div>
+
+  <div class="ls-color-swatches" id="lsColorSwatches"></div>
+
+  <div class="ls-color-foot">
+    <span class="ls-color-preview" id="lsColorPreview"></span>
+    <input type="text" id="lsColorHex" class="ls-color-hex" spellcheck="false" maxlength="7" />
+    <button type="button" id="lsColorReset" class="ls-edit-link-btn">Rétablir</button>
+  </div>
+</div>
+
+<%
+  // Confirmation dialog, replacing window.confirm() for the editor's three
+  // committing actions. The native dialog is unstyled, gives no room to spell
+  // out the consequences, and on some browsers is a thin strip at the top of
+  // the window that is easy to dismiss without reading.
+%>
+<div id="lsConfirm" class="ls-confirm" hidden>
+  <div class="ls-confirm-backdrop" data-confirm-cancel></div>
+
+  <div
+    class="ls-confirm-card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="lsConfirmTitle"
+    aria-describedby="lsConfirmText"
+  >
+    <div class="ls-confirm-icon" id="lsConfirmIcon" aria-hidden="true">
+      <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 16 16" fill="currentColor">
+        <path d="M8.982 1.566a1.13 1.13 0 0 0-1.96 0L.165 13.233c-.457.778.091 1.767.98 1.767h13.713c.889 0 1.438-.99.98-1.767zM8 5c.535 0 .954.462.9.995l-.35 3.507a.552.552 0 0 1-1.1 0L7.1 5.995A.905.905 0 0 1 8 5m.002 6a1 1 0 1 1 0 2 1 1 0 0 1 0-2"/>
+      </svg>
+    </div>
+
+    <h3 class="ls-confirm-title" id="lsConfirmTitle"></h3>
+    <p class="ls-confirm-text" id="lsConfirmText"></p>
+
+    <ul class="ls-confirm-points" id="lsConfirmPoints" hidden></ul>
+
+    <div class="ls-confirm-actions">
+      <button type="button" class="ls-edit-btn" id="lsConfirmCancel"></button>
+      <button type="button" class="ls-edit-btn ls-edit-btn-primary" id="lsConfirmOk"></button>
+    </div>
+  </div>
+</div>
+
+<input type="file" id="lsImageInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
+
+<!-- Character counter, shown next to the field being edited only when the
+     admin gets close to its limit. -->
+<div id="lsSlotCounter" class="ls-slot-counter" hidden></div>
+
+<div id="lsEditToast" class="ls-edit-toast" hidden></div>
