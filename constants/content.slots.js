@@ -19,6 +19,8 @@
 //   text  - plain text, escaped on output. No markup survives.
 //   rich  - a tiny HTML subset (b/strong/i/em/u/br). Sanitised on write.
 //   image - a URL under /img/ or /uploads/.
+//   count - a whole number within [min, max]. Used for the length of a
+//           repeating section, not for anything the visitor reads.
 //   color - a #rrggbb value, injected as a CSS custom property. Deliberately
 //           limited to the buttons: the owner asked on 2026-08-01 that body and
 //           heading text keep the colours the design gives them, so there is no
@@ -27,8 +29,110 @@ const SLOT_TYPE = {
     TEXT: 'text',
     RICH: 'rich',
     IMAGE: 'image',
-    COLOR: 'color'
+    COLOR: 'color',
+    COUNT: 'count'
 };
+
+// The Programme timeline is the one section whose length the admin controls,
+// and the only one that exists twice — once per ceremony.
+//
+// It is modelled as a fixed pool of slots plus a count, rather than as a list:
+// that keeps this registry the security boundary (every writable key is still
+// declared up front), keeps the per-slot character limits, and lets the
+// existing sanitiser and reset logic work unchanged. The alternative — one slot
+// holding a JSON array — would have needed its own validation, its own
+// sanitiser and its own rendering path.
+//
+// The ceiling exists so the section cannot grow without bound; raising it is a
+// one-line change here.
+const MAX_PROGRAM_ITEMS = 12;
+const MIN_PROGRAM_ITEMS = 1;
+
+// The two ceremonies. `id` appears in slot keys and in the DOM, so it must stay
+// stable. `label` is the tab's text and is deliberately **not** editable: the
+// two cities are fixed, and an editable label would be one more thing to get
+// wrong for no benefit. Changing a name is a one-word edit here.
+const PROGRAM_LOCATIONS = [
+    { id: 'locA', label: 'Abidjan' },
+    { id: 'locB', label: 'Ouagadougou' }
+];
+
+// Placeholder text for the programme fields.
+//
+// These are never stored and never rendered to a visitor. A field that has no
+// value is genuinely **empty**, and the editor draws the hint with a CSS
+// ::before on :empty — which is what lets typing start from a clean field
+// rather than in the middle of the hint, and what keeps the dashed outline
+// visible on a field that has been cleared.
+const PROGRAM_PLACEHOLDER_TITLE = 'Entrer un titre';
+const PROGRAM_PLACEHOLDER_TEXT = 'Entrer une description';
+const PROGRAM_PLACEHOLDER_TIME = "Entrer l'heure";
+
+// The three entries the site shipped with; everything past them starts as a
+// placeholder. Both ceremonies start from the same outline.
+const PROGRAM_PRESETS = [
+    { title: 'Église', text: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias odio,' },
+    { title: 'Mairie', text: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias odio,' },
+    { title: 'Réception', text: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias odio, lore' }
+];
+
+// The timeline entries live in a col-5, the narrowest text column on the site,
+// so these limits stay tight.
+function buildProgramSlots() {
+    const slots = [];
+
+    for (const location of PROGRAM_LOCATIONS) {
+
+        slots.push({
+            // How many timeline entries this ceremony shows. The pool below
+            // always exists; this is what decides where it stops.
+            key: `home.program.${location.id}.count`,
+            type: SLOT_TYPE.COUNT,
+            label: `Nombre d’étapes — ${location.label}`,
+            min: MIN_PROGRAM_ITEMS,
+            max: MAX_PROGRAM_ITEMS,
+            default: String(PROGRAM_PRESETS.length)
+        });
+
+        for (let index = 1; index <= MAX_PROGRAM_ITEMS; index += 1) {
+            const preset = PROGRAM_PRESETS[index - 1] ?? null;
+            const prefix = `home.program.${location.id}.item${index}`;
+
+            slots.push({
+                key: `${prefix}.title`,
+                type: SLOT_TYPE.TEXT,
+                label: `${location.label} — titre ${index}`,
+                max: 32,
+                placeholder: PROGRAM_PLACEHOLDER_TITLE,
+                default: preset === null ? '' : preset.title
+            });
+
+            slots.push({
+                // The time is optional: it defaults to empty and is simply not
+                // rendered when unset, so adding this field changed nothing on
+                // the live page. Only the editor shows its placeholder.
+                key: `${prefix}.time`,
+                type: SLOT_TYPE.TEXT,
+                label: `${location.label} — heure ${index}`,
+                max: 24,
+                optional: true,
+                placeholder: PROGRAM_PLACEHOLDER_TIME,
+                default: ''
+            });
+
+            slots.push({
+                key: `${prefix}.text`,
+                type: SLOT_TYPE.RICH,
+                label: `${location.label} — détails ${index}`,
+                max: 320,
+                placeholder: PROGRAM_PLACEHOLDER_TEXT,
+                default: preset === null ? '' : preset.text
+            });
+        }
+    }
+
+    return slots;
+}
 
 const CONTENT_SLOTS = [
 
@@ -197,50 +301,7 @@ const CONTENT_SLOTS = [
         max: 40,
         default: 'Programme'
     },
-    {
-        // The timeline entries live in a col-5, so they are the narrowest text
-        // column on the site. Keep these limits tight.
-        key: 'home.program.item1.title',
-        type: SLOT_TYPE.TEXT,
-        label: 'Programme — titre 1',
-        max: 32,
-        default: 'Église'
-    },
-    {
-        key: 'home.program.item1.text',
-        type: SLOT_TYPE.RICH,
-        label: 'Programme — détails 1',
-        max: 320,
-        default: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias odio,'
-    },
-    {
-        key: 'home.program.item2.title',
-        type: SLOT_TYPE.TEXT,
-        label: 'Programme — titre 2',
-        max: 32,
-        default: 'Mairie'
-    },
-    {
-        key: 'home.program.item2.text',
-        type: SLOT_TYPE.RICH,
-        label: 'Programme — détails 2',
-        max: 320,
-        default: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias odio,'
-    },
-    {
-        key: 'home.program.item3.title',
-        type: SLOT_TYPE.TEXT,
-        label: 'Programme — titre 3',
-        max: 32,
-        default: 'Réception'
-    },
-    {
-        key: 'home.program.item3.text',
-        type: SLOT_TYPE.RICH,
-        label: 'Programme — détails 3',
-        max: 320,
-        default: 'Lorem ipsum dolor sit amet, consectetur adipisicing elit. Alias odio, lore'
-    },
+    ...buildProgramSlots(),
 
     // --------------------------------------------------- Home / Notre Histoire
 
@@ -424,6 +485,12 @@ function getSlotKeysForPage(page) {
 export {
     SLOT_TYPE,
     CONTENT_SLOTS,
+    MAX_PROGRAM_ITEMS,
+    MIN_PROGRAM_ITEMS,
+    PROGRAM_LOCATIONS,
+    PROGRAM_PLACEHOLDER_TITLE,
+    PROGRAM_PLACEHOLDER_TEXT,
+    PROGRAM_PLACEHOLDER_TIME,
     COLOR_SLOTS,
     getSlot,
     isKnownSlot,

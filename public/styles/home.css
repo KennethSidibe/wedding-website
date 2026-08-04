@@ -420,6 +420,18 @@ p {
 
 .program-text {
     margin-top: 5vh;
+
+    /* A timeline entry used to be sized entirely by how tall its own text
+       happened to be — 5vh above it and nothing at all below — so entries only
+       looked evenly spaced because their descriptions wrapped to two or three
+       lines in the narrow col-5. A short entry collapsed and sat almost on top
+       of the next one, which is what a freshly added entry always is.
+       The padding gives every entry the same breathing room below it whatever
+       its length, and `min-height` stops a one-line entry from collapsing.
+       Both lengthen the row, so `.vertical-line-v2` (top: 0 / bottom: 0 of the
+       row) grows with it and the dashed line stays continuous. */
+    padding-bottom: 4vh;
+    min-height: 9rem;
 }
 
 .circle-line {
@@ -588,21 +600,94 @@ p {
     transform: translate(-50%, -50%);
 }
 
+/* The two dates sit in the bottom-right of the hero photo, stacked and
+   right-aligned. The panel itself reaches the corner; the *text* is held off
+   the edge by the panel's own padding, which is also what gives the blur room
+   to fade out.
+
+   Separation from the photograph is done with a blurred backdrop rather than a
+   hard shadow on the letters — see .dates-row::before. */
 .dates-row {
-    /* position: absolute;
-    z-index: 2; */
+    position: relative;
+
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: clamp(0.6rem, 1.6vh, 1.4rem);
+
+    /* Roomy on the left and top, where the blur has to fade into the photo. */
+    padding:
+        clamp(2rem, 6vh, 4rem)
+        clamp(1.5rem, 4vw, 3.5rem)
+        clamp(1.5rem, 4vh, 3rem)
+        clamp(3rem, 9vw, 8rem);
+
     color: white;
-    flex-wrap: nowrap;
-    
-
+    text-align: right;
 }
 
+/* The frosted panel.
+ *
+ * It lives on a pseudo-element, not on .dates-row itself, for one specific
+ * reason: `mask-image` clips everything the element paints, so masking
+ * .dates-row would fade out the dates along with the blur. Putting the blur and
+ * the mask on a layer of their own leaves the text untouched.
+ *
+ * The mask is a single radial gradient anchored to the bottom-right corner, so
+ * the blur is solid where the text sits and dissolves into the photograph in
+ * both directions at once — no hard edge to notice.
+ *
+ * The gradient background is not decoration: it is the fallback. Where
+ * backdrop-filter is unsupported it still darkens the corner enough to keep the
+ * text readable, so nothing depends on the blur landing. */
+.dates-row::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+
+    background: linear-gradient(
+        to top left,
+        rgba(0, 0, 0, 0.45),
+        rgba(0, 0, 0, 0.14) 58%,
+        rgba(0, 0, 0, 0) 85%
+    );
+
+    -webkit-backdrop-filter: blur(14px);
+    backdrop-filter: blur(14px);
+
+    -webkit-mask-image: radial-gradient(130% 140% at 100% 100%, #000 42%, transparent 80%);
+    mask-image: radial-gradient(130% 140% at 100% 100%, #000 42%, transparent 80%);
+
+    /* The photo underneath is an editable image slot; this layer must not
+       swallow the hover that reveals its "Changer la photo" control. */
+    pointer-events: none;
+}
+
+/* Positioned, so the dates paint above the panel. Without this they sit in the
+   in-flow layer, which is *below* a positioned pseudo-element, and the blur
+   would cover them. */
 .dates-row-item {
+    position: relative;
     min-width: 0;
-    flex: 1;
 }
 
-
+/* On a phone the vertical padding above is a problem of units, not of values.
+   It is measured in vh — against the viewport — but .img-container is only 40vh
+   tall here against 80vh on a desktop, so the same declaration takes roughly
+   double the share of the photo: the block came to about 62% of the image on a
+   390x844 screen versus 38% on a laptop.
+   Switching the vertical padding to rem ties it to the text instead of to the
+   screen, which brings it back to about 45% and lets the dates sit near the
+   bottom edge, as intended.
+   The left padding stays generous on purpose: it is the room the blur needs to
+   fade out horizontally, and tightening it makes the panel's left edge read as
+   a hard line. */
+@media (max-width: 576px) {
+    .dates-row {
+        padding: 1.25rem 1.1rem 0.9rem 2.75rem;
+        gap: 0.45rem;
+    }
+}
 
 .dates-border.right {
     height: 100%;
@@ -634,23 +719,14 @@ p {
     stroke-linejoin:miter;
 }
 
-.dates-row h2, .dates-row h4 {
-    filter: drop-shadow(8px 6px 0px black);
-    
-}
-.dates-row h2 {
-    @media (width < 500px) {
-        font-size: 1.3em;
-        filter: drop-shadow(2px 2px 0px black);
-    }
-    
-}
-.dates-row h4 {
-    @media (width < 500px) {
-        font-size: 1em;
-        filter: drop-shadow(2px 2px 0px black);
-    }
 
+/* A soft shadow, not the hard offset one this used to carry: the frosted panel
+   behind the text is what separates it from the photograph now, and a blocky
+   drop-shadow on top of that reads as two competing effects. This is only
+   insurance for a bright patch of photo. */
+.dates-row h2,
+.dates-row h4 {
+    text-shadow: 0 2px 14px rgba(0, 0, 0, 0.5);
 }
 
 
@@ -670,9 +746,135 @@ p {
     font-family: "Bodoni Moda", serif;
     font-optical-sizing: auto;
     font-weight: 300;
+
+    /* Sized explicitly rather than left to Bootstrap's h2, so the pair keeps a
+       deliberate relationship to each other at every width. */
+    margin-bottom: 0.1rem;
+    font-size: clamp(1.5rem, 2.6vw, 2.6rem);
+    line-height: 1.15;
 }
 
+/* Pinyon Script is a script face: it reads much smaller than its point size, so
+   it needs to be set larger than the date to carry equal weight on the photo.
+   Large enough to be legible over the image, short of competing with the
+   couple's names above it. */
 .location-title {
     font-family: "Pinyon Script", cursive;
     white-space: nowrap;
+
+    margin-bottom: 0;
+    font-size: clamp(1.35rem, 2.3vw, 2.3rem);
+    line-height: 1.2;
+}
+
+/* Programme — ceremony tabs and per-entry time */
+
+/* The two ceremonies sit centred under the "Programme" heading, on the same
+   vertical axis as it. A flex row that is centred as a group does that on its
+   own, and keeps the pair centred however long the two names are. */
+.program-tabs-row {
+    margin-bottom: 1.5rem;
+}
+
+.program-tabs {
+    display: inline-flex;
+    align-items: stretch;
+    gap: 0;
+
+    /* The space between the two names is the tabs' own horizontal padding, so
+       the underline can be inset from it and stay tied to the label's width. */
+    --tab-pad: 2.3rem;
+}
+
+/* Made to read as a control without shouting: the site's body serif, a resting
+   state that is clearly muted against the active one, and an underline that
+   grows out from the centre on selection. The underline is a pseudo-element
+   scaled on the X axis, so nothing reflows as it animates. */
+.program-tab {
+    position: relative;
+
+    padding: 0.35rem var(--tab-pad) 0.6rem;
+
+    font-family: "EB Garamond", serif;
+    font-size: calc(1rem + 0.55vw);
+    line-height: 1.2;
+    color: rgba(0, 0, 0, 0.42);
+
+    background: none;
+    border: 0;
+    cursor: pointer;
+    transition: color 0.22s ease, transform 0.22s ease;
+}
+
+.program-tab::after {
+    content: "";
+    position: absolute;
+    left: calc(var(--tab-pad) - 0.55rem);
+    right: calc(var(--tab-pad) - 0.55rem);
+    bottom: 0.15rem;
+    height: 2px;
+
+    background: #7B1B38;
+    transform: scaleX(0);
+    transition: transform 0.26s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+.program-tab:hover,
+.program-tab:focus-visible {
+    color: rgba(0, 0, 0, 0.75);
+    transform: translateY(-1px);
+    outline: none;
+}
+
+.program-tab:hover::after,
+.program-tab:focus-visible::after {
+    transform: scaleX(0.45);
+}
+
+.program-tab.is-active {
+    color: #591427;
+}
+
+.program-tab.is-active::after {
+    transform: scaleX(1);
+}
+
+.program-tab:focus-visible {
+    text-decoration: underline dotted rgba(0, 0, 0, 0.35);
+    text-underline-offset: 0.6rem;
+}
+
+/* Only the selected ceremony's timeline is shown. */
+.program-panel {
+    display: none;
+}
+
+.program-panel.is-active {
+    display: block;
+}
+
+/* The time under an entry's heading. Deliberately quiet — it is a detail, not
+   a second title — and it inherits the row's alignment, so it needs no
+   left/right variants of its own. It is only rendered when it has a value, so
+   entries without a time look exactly as they did before it existed. */
+.program-time {
+    margin-top: -0.15rem;
+    margin-bottom: 0.35rem;
+
+    font-family: "EB Garamond", serif;
+    font-size: 0.82rem !important;
+    font-style: italic;
+    letter-spacing: 0.06em;
+    color: #7B1B38;
+    opacity: 0.75;
+}
+
+@media (max-width: 576px) {
+    .program-tabs {
+        --tab-pad: 1.3rem;
+    }
+
+    .program-tab {
+        font-size: 1.05rem;
+    }
 }

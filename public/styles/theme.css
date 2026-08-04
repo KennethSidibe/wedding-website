@@ -258,3 +258,27 @@ html[data-theme="dark"] .register-toast-close:focus-visible {
 html[data-theme="dark"] .register-toast-progress {
     background-color: rgba(255, 255, 255, 0.06);
 }
+
+/* Programme — ceremony tabs and per-entry time */
+
+html[data-theme="dark"] .program-tab {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+html[data-theme="dark"] .program-tab:hover,
+html[data-theme="dark"] .program-tab:focus-visible {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+html[data-theme="dark"] .program-tab.is-active {
+    color: var(--ls-accent);
+}
+
+html[data-theme="dark"] .program-tab::after {
+    background: var(--ls-accent);
+}
+
+
+html[data-theme="dark"] .program-time {
+    color: var(--ls-accent);
+}

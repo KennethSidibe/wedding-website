@@ -57,9 +57,20 @@
 
       <span id="lsEditStatus" class="ls-edit-status">Aucune modification</span>
 
-      <button type="button" id="lsEditReset" class="ls-edit-link-btn">
-        Rétablir cette page
-      </button>
+      <div class="ls-edit-resets">
+        <%
+          // Two different "undo"s, deliberately spelled out rather than both
+          // called "rétablir": one goes back to what is published, the other
+          // goes back to the content the site shipped with.
+        %>
+        <button type="button" id="lsEditRevertSaved" class="ls-edit-link-btn" disabled>
+          Revenir à la dernière version enregistrée
+        </button>
+        <span class="ls-edit-resets-sep" aria-hidden="true">·</span>
+        <button type="button" id="lsEditReset" class="ls-edit-link-btn">
+          Rétablir le contenu d'origine
+        </button>
+      </div>
     </div>
   </div>
 </div>

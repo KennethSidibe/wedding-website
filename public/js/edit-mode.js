@@ -27,6 +27,7 @@
     var discardButton = document.getElementById("lsEditDiscard");
     var exitButton = document.getElementById("lsEditExit");
     var resetButton = document.getElementById("lsEditReset");
+    var revertSavedButton = document.getElementById("lsEditRevertSaved");
     var statusLabel = document.getElementById("lsEditStatus");
 
     var toastElement = document.getElementById("lsEditToast");
@@ -165,6 +166,16 @@
         return Array.prototype.some.call(
             document.querySelectorAll(".ls-slot"),
             function (element) {
+                // Optional slots are allowed to be empty; that is what "unset"
+                // means for them.
+                if (element.dataset.slotOptional === "1") return false;
+
+                // Entries past a ceremony's count are rendered but hidden, and
+                // they are empty by design. Counting them left Save disabled
+                // for ever, however completely the visible programme was
+                // filled in — the bug the owner hit on 2026-08-03.
+                if (element.closest(".ls-program-hidden") != null) return false;
+
                 return plainLength(element) === 0;
             }
         );
@@ -185,6 +196,7 @@
 
         saveButton.disabled = count === 0 || blocked;
         discardButton.disabled = count === 0;
+        if (revertSavedButton != null) revertSavedButton.disabled = count === 0;
 
         saveButton.textContent = count === 0 ? "Enregistrer" : "Enregistrer (" + count + ")";
         saveButton.title = blocked
@@ -199,6 +211,12 @@
             pending.set(key, value);
         }
         refreshBar();
+
+        // A programme field changed, so its entry's ↺ may need enabling.
+        if (key.indexOf("home.program.") === 0 && typeof updateRevertState === "function") {
+            var match = /^home\.program\.(loc[A-Z])\./.exec(key);
+            if (match !== null) updateRevertState(match[1]);
+        }
     }
 
     function syncSlot(element) {
@@ -325,6 +343,23 @@
         }
     }
 
+    // contenteditable leaves a stray <br> behind when a field is emptied, which
+    // stops it matching :empty — and :empty is what draws the hint and holds
+    // the box open. Normalising here is what keeps the two in step.
+    //
+    // Note there is deliberately no clear-on-focus: clicking a field simply
+    // puts the caret in it. An earlier build emptied the field on focus so the
+    // admin typed a replacement, and it was removed on 2026-08-03. Clicking the
+    // whitespace beside a heading lands on the block's line box, which the
+    // browser maps to the nearest editable position — inside the field — so a
+    // click that was never meant to touch the text wiped it. These fields hold
+    // copy that is edited, not values that are replaced wholesale.
+    function normalizeIfBlank(element) {
+        if (element.innerHTML !== "" && element.textContent.trim() === "") {
+            element.innerHTML = "";
+        }
+    }
+
     function initTextSlots() {
         document.querySelectorAll(".ls-slot").forEach(function (element) {
             baseline.set(element.dataset.slot, readSlot(element));
@@ -334,6 +369,7 @@
             element.addEventListener("keydown", onKeyDown);
 
             element.addEventListener("input", function () {
+                normalizeIfBlank(element);
                 syncSlot(element);
                 positionCounter(element);
             });
@@ -344,6 +380,7 @@
 
             element.addEventListener("blur", function () {
                 counterElement.hidden = true;
+                normalizeIfBlank(element);
                 syncSlot(element);
             });
 
@@ -910,6 +947,260 @@
         });
     }
 
+    // ------------------------------------------------- programme timeline
+
+    // Adding and removing timeline entries, per ceremony. The whole pool is
+    // already in the DOM — the server rendered every entry and hid the ones
+    // past the count — so this never builds markup. It reveals a row, or shifts
+    // values up a row and hides the last one. The zig-zag takes care of itself,
+    // because which side an entry sits on is decided by its position, not by
+    // its content.
+
+    var PROGRAM_PLACEHOLDERS = {
+        title: "Ajouter un titre",
+        time: "Ajouter une heure",
+        text: "Ajouter une description"
+    };
+
+    // locationId -> { rows, count, addRow, addButton }
+    var programs = {};
+
+    function programSlots(row) {
+        var slots = { title: null, time: null, text: null };
+
+        row.querySelectorAll(".ls-slot").forEach(function (element) {
+            var key = element.dataset.slot || "";
+            if (/\.title$/.test(key)) slots.title = element;
+            else if (/\.time$/.test(key)) slots.time = element;
+            else if (/\.text$/.test(key)) slots.text = element;
+        });
+
+        return slots;
+    }
+
+    // Writes a value into a slot element and re-runs the normal dirty-tracking,
+    // so a shifted entry is saved exactly like a hand-typed one.
+    function setSlotValue(element, value, isRich) {
+        if (element == null) return;
+
+        if (isRich) {
+            element.innerHTML = value;
+        } else {
+            element.textContent = value;
+        }
+
+        // An empty field must be genuinely empty, or :empty stops matching and
+        // the hint and the box both disappear.
+        normalizeIfBlank(element);
+        syncSlot(element);
+    }
+
+    function copyProgramEntry(fromRow, toRow) {
+        var from = programSlots(fromRow);
+        var to = programSlots(toRow);
+
+        setSlotValue(to.title, from.title.textContent, false);
+        setSlotValue(to.text, from.text.innerHTML, true);
+
+        if (from.time != null && to.time != null) {
+            setSlotValue(to.time, from.time.textContent, false);
+        }
+    }
+
+    // A new or freed entry starts empty, so each of its fields shows its hint.
+    function resetProgramEntry(row) {
+        var slots = programSlots(row);
+        setSlotValue(slots.title, "", false);
+        setSlotValue(slots.text, "", true);
+        if (slots.time != null) setSlotValue(slots.time, "", false);
+    }
+
+    // The ↺ button: puts an entry's three fields back to what is currently
+    // published, discarding unsaved edits to that entry alone.
+    function revertProgramEntry(locationId, index) {
+        var program = programs[locationId];
+        if (program == null) return;
+
+        var row = program.rows[index - 1];
+        if (row == null) return;
+
+        var slots = programSlots(row);
+
+        [slots.title, slots.time, slots.text].forEach(function (element) {
+            if (element == null) return;
+
+            var saved = baseline.get(element.dataset.slot);
+            if (saved == null) saved = "";
+
+            setSlotValue(element, saved, element.dataset.slotType === "rich");
+        });
+
+        updateRevertState(locationId);
+    }
+
+    // The button is only useful when there is something to undo.
+    function updateRevertState(locationId) {
+        var program = programs[locationId];
+        if (program == null) return;
+
+        program.rows.forEach(function (row, index) {
+            var button = row.querySelector(".ls-program-revert");
+            if (button == null) return;
+
+            var slots = programSlots(row);
+            var dirty = [slots.title, slots.time, slots.text].some(function (element) {
+                return element != null && pending.has(element.dataset.slot);
+            });
+
+            button.disabled = !dirty;
+        });
+    }
+
+    function refreshProgramUi(locationId) {
+        var program = programs[locationId];
+        if (program == null) return;
+
+        program.rows.forEach(function (row, index) {
+            row.classList.toggle("ls-program-hidden", index + 1 > program.count);
+        });
+
+        var full = program.count >= program.rows.length;
+        program.addRow.classList.toggle("is-full", full);
+        program.addButton.disabled = full;
+        program.addButton.title = full
+            ? "Le programme est limité à " + program.rows.length + " étapes."
+            : "Ajouter une étape";
+
+        setPending("home.program." + locationId + ".count", String(program.count));
+    }
+
+    function addProgramEntry(locationId) {
+        var program = programs[locationId];
+        if (program == null) return;
+
+        if (program.count >= program.rows.length) {
+            showToast("Le programme est limité à " + program.rows.length + " étapes.", "error");
+            return;
+        }
+
+        program.count += 1;
+        var row = program.rows[program.count - 1];
+        resetProgramEntry(row);
+        refreshProgramUi(locationId);
+
+        // Put the caret straight in the new title: the admin's next action is
+        // always to name the entry they just created.
+        var title = programSlots(row).title;
+        if (title != null) {
+            row.scrollIntoView({ block: "center", behavior: "smooth" });
+            window.setTimeout(function () { title.focus(); }, 220);
+        }
+    }
+
+    // The refusal: shake the entry's heading and text, and show a message above
+    // them, the way a form field rejects a value.
+    function refuseLastRemoval(row) {
+        var error = row.querySelector(".ls-program-error");
+
+        // The h4 and the p, not the .ls-slot spans inside them: `transform` is
+        // ignored on an inline box, so shaking the spans would do nothing.
+        var targets = Array.prototype.slice.call(
+            row.querySelectorAll(".program-text h4, .program-text p:not(.ls-program-error)")
+        );
+
+        if (error != null) error.hidden = false;
+
+        targets.forEach(function (element) {
+            element.classList.remove("ls-shake");
+            // Force a reflow so the animation restarts on a repeated click.
+            void element.offsetWidth;
+            element.classList.add("ls-shake");
+        });
+
+        window.setTimeout(function () {
+            targets.forEach(function (element) { element.classList.remove("ls-shake"); });
+        }, 500);
+
+        window.clearTimeout(row.lsErrorTimer);
+        row.lsErrorTimer = window.setTimeout(function () {
+            if (error != null) error.hidden = true;
+        }, 4000);
+    }
+
+    function removeProgramEntry(locationId, index) {
+        var program = programs[locationId];
+        if (program == null) return;
+
+        var row = program.rows[index - 1];
+        if (row == null) return;
+
+        if (program.count <= 1) {
+            refuseLastRemoval(row);
+            return;
+        }
+
+        // Shift every later entry up one, then blank the freed last row so a
+        // future add starts from the placeholder rather than resurrecting text
+        // the admin removed.
+        for (var i = index; i < program.count; i += 1) {
+            copyProgramEntry(program.rows[i], program.rows[i - 1]);
+        }
+        resetProgramEntry(program.rows[program.count - 1]);
+
+        program.count -= 1;
+        refreshProgramUi(locationId);
+    }
+
+    function initProgramControls() {
+        document.querySelectorAll("[data-program-add]").forEach(function (addRow) {
+            var locationId = addRow.dataset.programAdd;
+
+            var rows = Array.prototype.slice.call(
+                document.querySelectorAll('[data-program-row][data-program-loc="' + locationId + '"]')
+            );
+            if (rows.length === 0) return;
+
+            var program = {
+                rows: rows,
+                addRow: addRow,
+                addButton: addRow.querySelector(".ls-program-add-btn"),
+                count: rows.filter(function (row) {
+                    return !row.classList.contains("ls-program-hidden");
+                }).length
+            };
+            programs[locationId] = program;
+
+            // The count has no .ls-slot element, so initTextSlots() never
+            // recorded it. Seed it by hand or the first refresh would register
+            // as an edit.
+            baseline.set("home.program." + locationId + ".count", String(program.count));
+
+            program.addButton.addEventListener("click", function () {
+                addProgramEntry(locationId);
+            });
+
+            // Sets the disabled state without marking the page dirty: simply
+            // opening the editor must not count as a change.
+            var full = program.count >= program.rows.length;
+            addRow.classList.toggle("is-full", full);
+            program.addButton.disabled = full;
+        });
+
+        document.querySelectorAll("[data-remove-program]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                removeProgramEntry(button.dataset.removeLoc, Number(button.dataset.removeProgram));
+            });
+        });
+
+        document.querySelectorAll("[data-revert-program]").forEach(function (button) {
+            button.addEventListener("click", function () {
+                revertProgramEntry(button.dataset.revertLoc, Number(button.dataset.revertProgram));
+            });
+        });
+
+        Object.keys(programs).forEach(updateRevertState);
+    }
+
     // ------------------------------------------------- confirmation dialog
 
     var confirmRoot = document.getElementById("lsConfirm");
@@ -1069,6 +1360,28 @@
         });
     }
 
+    // Back to what is currently published — the whole page's version of the
+    // per-entry revert button. Reloading is the honest implementation: every
+    // unsaved change lives only in the browser, so discarding them all is
+    // exactly a reload.
+    function revertToSaved() {
+        var unsaved = pending.size;
+        if (unsaved === 0) return;
+
+        askConfirm({
+            title: "Revenir à la dernière version enregistrée ?",
+            text: "La page reviendra à ce qui est actuellement publié sur le site.",
+            points: [unsavedWarning(unsaved), "Ce qui est déjà publié ne sera pas touché."],
+            okLabel: "Revenir à la version enregistrée",
+            cancelLabel: "Continuer à modifier",
+            danger: true
+        }).then(function (confirmed) {
+            if (!confirmed) return;
+            allowUnload = true;
+            window.location.reload();
+        });
+    }
+
     function resetPage() {
         askConfirm({
             title: "Rétablir le contenu d'origine ?",
@@ -1164,11 +1477,13 @@
     initTextSlots();
     initDeferredLabels();
     initImageSlots();
+    initProgramControls();
     initColorPicker();
 
     saveButton.addEventListener("click", save);
     discardButton.addEventListener("click", discard);
     resetButton.addEventListener("click", resetPage);
+    if (revertSavedButton != null) revertSavedButton.addEventListener("click", revertToSaved);
     exitButton.addEventListener("click", exitEditMode);
 
     // A link wrapping editable content would navigate away the moment the admin

@@ -871,3 +871,267 @@ body.ls-confirm-open {
         flex-basis: 100%;
     }
 }
+
+/* ------------------------------------------------------- programme timeline */
+
+/* Entries past the current count. They stay in the DOM so the editor can reveal
+   one without building markup in JavaScript, but they take no space, which is
+   what keeps the add button directly under the last visible entry. */
+.ls-program-hidden {
+    display: none !important;
+}
+
+/* The whole point of this block is that it changes nothing about the timeline
+   itself: the rows keep their own margins, line and dashes. Everything the
+   editor adds is absolutely positioned inside a row that is already
+   `position: relative`, so it cannot move the design. */
+body.ls-edit-mode .program-text {
+    position: relative;
+}
+
+.ls-program-remove {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 26px;
+    height: 26px;
+    padding: 0;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 1.15rem;
+    font-weight: 700;
+    line-height: 1;
+    color: var(--ls-edit-red);
+
+    background: #fff;
+    border: 1px solid rgba(220, 38, 38, 0.45);
+    border-radius: 50%;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.ls-program-remove:hover,
+.ls-program-remove:focus-visible {
+    color: #fff;
+    background: var(--ls-edit-red);
+    transform: scale(1.08);
+    outline: none;
+}
+
+/* The refusal message, styled like a form field error: it appears above the
+   heading and pushes nothing, because the row has room above the text. */
+.ls-program-error {
+    position: absolute;
+    top: -2.2rem;
+    left: 0;
+    right: 0;
+
+    margin: 0;
+    padding-inline: 2.4rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 0.78rem !important;
+    font-weight: 700;
+    color: var(--ls-edit-red);
+}
+
+/* Shaken when the admin tries to remove the only remaining entry. Transform
+   only — it never reflows the page. */
+.ls-shake {
+    animation: ls-shake 0.4s cubic-bezier(0.36, 0.07, 0.19, 0.97);
+}
+
+@keyframes ls-shake {
+    10%, 90% { transform: translateX(-2px); }
+    20%, 80% { transform: translateX(4px); }
+    30%, 50%, 70% { transform: translateX(-7px); }
+    40%, 60% { transform: translateX(7px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-shake { animation: none; }
+}
+
+/* The add affordance. It carries its own `.vertical-line-v2`, so the dashed
+   line runs into the + rather than stopping short of it. */
+.ls-program-add {
+    min-height: 11vh;
+}
+
+.ls-program-add-inner {
+    position: relative;
+    z-index: 1;
+
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.35rem;
+
+    padding-top: 5vh;
+}
+
+.ls-program-add-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 42px;
+    height: 42px;
+    padding: 0;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 1.6rem;
+    font-weight: 400;
+    line-height: 1;
+    color: var(--ls-edit-blue);
+
+    background: #fff;
+    border: 2px dashed rgba(37, 99, 235, 0.5);
+    border-radius: 50%;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+}
+
+.ls-program-add-btn:hover,
+.ls-program-add-btn:focus-visible {
+    color: #fff;
+    background: var(--ls-edit-blue);
+    border-color: var(--ls-edit-blue);
+    border-style: solid;
+    transform: scale(1.06);
+    outline: none;
+}
+
+/* Muted like an input's helper text, per the brief. */
+.ls-program-add-hint {
+    margin: 0;
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 0.8rem !important;
+    color: rgba(15, 23, 42, 0.45);
+    text-align: center;
+}
+
+.ls-program-add.is-full .ls-program-add-btn {
+    opacity: 0.35;
+    cursor: not-allowed;
+}
+
+html[data-theme="dark"] .ls-program-add-hint {
+    color: rgba(255, 255, 255, 0.45);
+}
+
+html[data-theme="dark"] .ls-program-add-btn,
+html[data-theme="dark"] .ls-program-remove {
+    background: #1a1a1a;
+}
+
+/* An empty field keeps its box and shows a hint.
+ *
+ * Drawn with ::before on :empty rather than as real text, for three reasons:
+ * typing starts from a clean field instead of in the middle of the hint, the
+ * hint can never be saved as if it were content, and a visitor never sees it.
+ *
+ * `display: inline-block` and the minimum size are what fix the box vanishing
+ * when a field is cleared: an empty inline span has zero width and height, so
+ * the dashed outline collapsed to a point and there was nothing left to click.
+ * Only empty fields are inline-block, so nothing else in the page reflows. */
+.ls-slot:empty {
+    display: inline-block;
+    min-width: 9ch;
+    min-height: 1.1em;
+    vertical-align: baseline;
+}
+
+.ls-slot[data-slot-placeholder]:empty::before {
+    content: attr(data-slot-placeholder);
+
+    opacity: 0.38;
+    font-style: italic;
+    /* The hint is a label for the box, not content in it. */
+    pointer-events: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+
+/* Cleared-on-click fields still read as editable while they are empty. */
+.ls-slot:empty:focus {
+    outline: 2px solid var(--ls-edit-blue);
+    background-color: rgba(37, 99, 235, 0.1);
+}
+
+/* The per-entry controls sit as a pair above the heading: × removes the entry,
+   ↺ puts its three fields back to their last saved values. */
+.ls-program-actions {
+    position: absolute;
+    top: -2.1rem;
+    z-index: 2;
+
+    display: flex;
+    gap: 0.35rem;
+}
+
+.program-row.left .ls-program-actions { left: 0.5rem; }
+.program-row.right .ls-program-actions { right: 0.5rem; }
+
+.ls-program-revert {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 26px;
+    height: 26px;
+    padding: 0;
+
+    color: var(--ls-edit-blue);
+
+    background: #fff;
+    border: 1px solid rgba(37, 99, 235, 0.45);
+    border-radius: 50%;
+    cursor: pointer;
+    touch-action: manipulation;
+    transition: background-color 0.15s ease, color 0.15s ease, transform 0.15s ease;
+}
+
+.ls-program-revert:hover,
+.ls-program-revert:focus-visible {
+    color: #fff;
+    background: var(--ls-edit-blue);
+    transform: scale(1.08) rotate(-45deg);
+    outline: none;
+}
+
+.ls-program-revert:disabled {
+    opacity: 0.3;
+    cursor: not-allowed;
+    transform: none;
+}
+
+html[data-theme="dark"] .ls-program-revert {
+    background: #1a1a1a;
+}
+
+/* The two undo actions sit together so the difference between them is legible:
+   one returns to what is published, the other to what the site shipped with. */
+.ls-edit-resets {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.45rem;
+    align-items: center;
+}
+
+.ls-edit-resets-sep {
+    color: rgba(15, 23, 42, 0.28);
+}
+
+.ls-edit-link-btn:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.ls-edit-link-btn:disabled:hover {
+    color: #64748b;
+}

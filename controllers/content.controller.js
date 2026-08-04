@@ -177,6 +177,21 @@ function validateSlotValue(key, rawValue) {
         return { value: value.toLowerCase() };
     }
 
+    if (slot.type === SLOT_TYPE.COUNT) {
+        // Clamped rather than rejected on range: the count is written by the
+        // editor, not typed by a human, so an out-of-range value means a bug
+        // or a tampered request — either way the safe reading is "as many as
+        // are allowed", never zero entries or an unbounded page.
+        const value = Number.parseInt(String(rawValue).trim(), 10);
+
+        if (!Number.isFinite(value)) {
+            return { error: `Valeur invalide pour « ${slot.label} »` };
+        }
+
+        const clamped = Math.min(Math.max(value, slot.min), slot.max);
+        return { value: String(clamped) };
+    }
+
     if (slot.type === SLOT_TYPE.IMAGE) {
         const value = rawValue.trim();
         if (!IMAGE_PATH_PATTERN.test(value) || value.includes('..')) {
@@ -191,7 +206,11 @@ function validateSlotValue(key, rawValue) {
         // friendlier than an error the admin cannot act on.
         const value = stripTags(rawValue).replace(/\s+/g, ' ').trim();
 
+        // An optional slot (the per-entry time) may be cleared. Empty means
+        // "unset", and an unset slot is simply not rendered — which is how
+        // adding the time field changed nothing on the live page.
         if (value.length === 0) {
+            if (slot.optional === true) return { value: '' };
             return { error: `« ${slot.label} » ne peut pas être vide` };
         }
         if (value.length > slot.max) {

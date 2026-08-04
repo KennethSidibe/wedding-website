@@ -1,4 +1,11 @@
-import { SLOT_TYPE, CONTENT_SLOTS, getSlot } from "../constants/content.slots.js";
+import {
+    SLOT_TYPE,
+    CONTENT_SLOTS,
+    MAX_PROGRAM_ITEMS,
+    MIN_PROGRAM_ITEMS,
+    PROGRAM_LOCATIONS,
+    getSlot
+} from "../constants/content.slots.js";
 import {
     getContentValue,
     getColorVariables,
@@ -72,22 +79,55 @@ export function contentLocals(req, res, next) {
 
         if (!editMode) return html;
 
+        // A field with no value is rendered genuinely empty. The editor draws
+        // the hint with a CSS ::before on :empty, so typing starts from a clean
+        // field instead of inside the hint text, and an emptied field keeps its
+        // dashed outline instead of collapsing to nothing.
+        //
+        // `data-slot-placeholder` therefore carries hint *text*, not a value —
+        // it is never stored and never shown to a visitor.
         return '<span class="ls-slot"'
             + ` data-slot="${escapeHtml(key)}"`
             + ` data-slot-type="${definition.type}"`
             + ` data-slot-max="${definition.max ?? 0}"`
             + ` data-slot-label="${escapeHtml(definition.label)}"`
             + ` data-slot-custom="${hasOverride(key) ? '1' : '0'}"`
+            + (definition.optional === true ? ' data-slot-optional="1"' : '')
+            + (definition.placeholder != null
+                ? ` data-slot-placeholder="${escapeHtml(definition.placeholder)}"` : '')
             + ' contenteditable="true" spellcheck="false" role="textbox">'
             + html
             + '</span>';
     };
+
+    // Whether an optional slot has been filled in — the template uses it to
+    // leave the element out entirely for visitors.
+    res.locals.slotHasValue = (key) => getContentValue(key) !== '';
 
     // The URL for an image slot. The template also carries a data-img-slot
     // attribute, which is what the editor hooks its overlay onto.
     res.locals.imgSrc = (key) => escapeHtml(getContentValue(key));
 
     res.locals.hasOverride = hasOverride;
+
+    // The Programme timelines, one per ceremony. In edit mode the template
+    // renders each whole pool and hides the entries past the count, so the
+    // editor can reveal one without having to build markup in JavaScript —
+    // which is what would otherwise let the editor's copy of the design drift
+    // from the template's.
+    res.locals.programLocations = PROGRAM_LOCATIONS.map((location) => ({
+        id: location.id,
+        label: location.label,
+        count: Math.min(
+            Math.max(
+                Number.parseInt(getContentValue(`home.program.${location.id}.count`), 10)
+                    || MIN_PROGRAM_ITEMS,
+                MIN_PROGRAM_ITEMS
+            ),
+            MAX_PROGRAM_ITEMS
+        )
+    }));
+    res.locals.maxProgramItems = MAX_PROGRAM_ITEMS;
 
     next();
 }

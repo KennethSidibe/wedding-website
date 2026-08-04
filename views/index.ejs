@@ -37,28 +37,30 @@
     <% } %>
 
     <div id="intro" class="section">
+      <%
+        // The two dates sit in the bottom-right of the photo, stacked and
+        // right-aligned, inset from the corner rather than flush against it.
+        //
+        // The wrapper is a plain div, not a Bootstrap `.row`: `.row` carries
+        // negative horizontal margins that would pull the block back out past
+        // the inset this layout depends on.
+      %>
       <div
-        class="img-container d-flex justify-content-center align-items-end"
+        class="img-container d-flex justify-content-end align-items-end"
         data-img-slot="home.hero.image"
         data-img-var="--ls-hero-image"
         data-img-value="<%= imgSrc('home.hero.image') %>"
       >
-        <div class="container d-flex justify-content-center align-items-center">
-          <div
-            class="row dates-row d-flex justify-content-center align-items-center
-             flex-md-row"
-          >
-            <div class="col mx-2 dates-row-item text-center">
-              <h2 class="date-title"><%- slot('home.hero.date1') %></h1>
-              <h4 class="location-title"><%- slot('home.hero.location1') %></h2>
-            </div>
-            <div class="col mx-2 dates-row-item text-center">
-              <h2 class="date-title"><%- slot('home.hero.date2') %></h1>
-              <h4 class="location-title"><%- slot('home.hero.location2') %></h2>
-            </div>
+        <div class="dates-row">
+          <div class="dates-row-item">
+            <h2 class="date-title"><%- slot('home.hero.date1') %></h2>
+            <h4 class="location-title"><%- slot('home.hero.location1') %></h4>
+          </div>
+          <div class="dates-row-item">
+            <h2 class="date-title"><%- slot('home.hero.date2') %></h2>
+            <h4 class="location-title"><%- slot('home.hero.location2') %></h4>
           </div>
         </div>
-
       </div>
     </div>
 
@@ -166,74 +168,133 @@
         <a class="anchor" id="program-anchor"></a>
       </div>
 
-      <div class="row program-row left" style="position: relative">
+      <%
+        // Two ceremonies, two timelines, one at a time.
+        //
+        // Both panels are always rendered; the tabs below just switch which one
+        // is visible, so a guest can compare them without a page load. In edit
+        // mode each panel additionally renders its whole pool of entries and
+        // hides the ones past its count, so adding an entry is a matter of
+        // revealing markup the server already produced — the editor never
+        // rebuilds this design in JavaScript.
+        //
+        // Sides alternate by position, not by content: entry 1 is left, 2 is
+        // right, and so on. That is what makes removal work — shifting the
+        // values up one slot leaves the zig-zag intact automatically.
+      %>
+      <div class="row text-center program-tabs-row">
         <div class="col">
-          <div class="vertical-line-v2"></div>
-          <div class="circle-line"></div>
-          <div class="circle-dash"></div>
-
-          <div class="container program-text">
-            <div class="mx-2 row">
-              <div class="col-5">
-                <h4 class=""><%- slot('home.program.item1.title') %></h4>
-              </div>
-            </div>
-            <div class="mx-2 row">
-              <div class="col-5">
-                <p class="">
-                  <%- slot('home.program.item1.text') %>
-                </p>
-              </div>
-            </div>
+          <div class="program-tabs" role="tablist" aria-label="Choisir la cérémonie">
+            <% programLocations.forEach(function (location, index) { %>
+            <button
+              type="button"
+              class="program-tab<%= index === 0 ? ' is-active' : '' %>"
+              role="tab"
+              aria-selected="<%= index === 0 ? 'true' : 'false' %>"
+              aria-controls="program-panel-<%= location.id %>"
+              data-program-tab="<%= location.id %>"
+            ><%= location.label %></button>
+            <% }); %>
           </div>
         </div>
       </div>
 
-      <div class="row program-row right" style="position: relative">
-        <div class="col">
-          <div class="vertical-line-v2"></div>
-          <div class="circle-line"></div>
-          <div class="circle-dash right"></div>
+      <% programLocations.forEach(function (location, locationIndex) { %>
+      <div
+        class="program-panel<%= locationIndex === 0 ? ' is-active' : '' %>"
+        id="program-panel-<%= location.id %>"
+        role="tabpanel"
+        data-program-panel="<%= location.id %>"
+      >
+        <% const rendered = editMode ? maxProgramItems : location.count; %>
+        <% for (let i = 1; i <= rendered; i++) { %>
+        <%
+          const isLeft = i % 2 === 1;
+          const beyondCount = i > location.count;
+          const prefix = `home.program.${location.id}.item${i}`;
+        %>
+        <div
+          class="row program-row <%= isLeft ? 'left' : 'right' %><%= beyondCount ? ' ls-program-hidden' : '' %>"
+          style="position: relative"<% if (editMode) { %> data-program-row="<%= i %>" data-program-loc="<%= location.id %>"<% } %>>
+          <div class="col">
+            <div class="vertical-line-v2"></div>
+            <div class="circle-line"></div>
+            <div class="circle-dash<%= isLeft ? '' : ' right' %>"></div>
 
-          <div class="container program-text">
-            <div class="mx-2 row justify-content-end">
-              <div class="col-5">
-                <h4 class="text-end"><%- slot('home.program.item2.title') %></h4>
+            <div class="container program-text">
+              <% if (editMode) { %>
+              <p class="ls-program-error<%= isLeft ? '' : ' text-end' %>" hidden>
+                Vous devez garder au moins une étape au programme.
+              </p>
+              <div class="ls-program-actions">
+                <button
+                  type="button"
+                  class="ls-program-remove"
+                  data-remove-program="<%= i %>"
+                  data-remove-loc="<%= location.id %>"
+                  title="Supprimer cette étape"
+                  aria-label="Supprimer cette étape"
+                >&times;</button>
+                <button
+                  type="button"
+                  class="ls-program-revert"
+                  data-revert-program="<%= i %>"
+                  data-revert-loc="<%= location.id %>"
+                  title="Rétablir cette étape"
+                  aria-label="Rétablir cette étape"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
+                    <path d="M8 4.466V.534a.25.25 0 0 0-.41-.192L5.23 2.308a.25.25 0 0 0 0 .384l2.36 1.966A.25.25 0 0 0 8 4.466"/>
+                  </svg>
+                </button>
               </div>
-            </div>
-            <div class="mx-2 row justify-content-end">
-              <div class="col-5">
-                <p class="text-end">
-                  <%- slot('home.program.item2.text') %>
-                </p>
+              <% } %>
+
+              <div class="mx-2 row<%= isLeft ? '' : ' justify-content-end' %>">
+                <div class="col-5">
+                  <h4 class="<%= isLeft ? '' : 'text-end' %>"><%- slot(`${prefix}.title`) %></h4>
+                  <% if (editMode || slotHasValue(`${prefix}.time`)) { %>
+                  <p class="program-time <%= isLeft ? '' : 'text-end' %>"><%- slot(`${prefix}.time`) %></p>
+                  <% } %>
+                </div>
+              </div>
+              <div class="mx-2 row<%= isLeft ? '' : ' justify-content-end' %>">
+                <div class="col-5">
+                  <p class="<%= isLeft ? '' : 'text-end' %>">
+                    <%- slot(`${prefix}.text`) %>
+                  </p>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </div>
+        <% } %>
 
-      <div class="row program-row left" style="position: relative">
-        <div class="col">
-          <div class="vertical-line-v2"></div>
-          <div class="circle-line"></div>
-          <div class="circle-dash"></div>
-
-          <div class="container program-text">
-            <div class="mx-2 row">
-              <div class="col-5">
-                <h4 class=""><%- slot('home.program.item3.title') %></h4>
-              </div>
-            </div>
-            <div class="mx-2 row">
-              <div class="col-5">
-                <p class="">
-                  <%- slot('home.program.item3.text') %>
-                </p>
-              </div>
+        <% if (editMode) { %>
+        <%
+          // The add affordance continues the dashed line and puts the + on it,
+          // so the section still reads as one timeline while it is being
+          // edited. It sits after every row in the DOM — the hidden rows take
+          // no space, so it always lands directly under the last visible entry.
+        %>
+        <div class="row program-row ls-program-add" data-program-add="<%= location.id %>" style="position: relative">
+          <div class="col">
+            <div class="vertical-line-v2"></div>
+            <div class="ls-program-add-inner">
+              <button
+                type="button"
+                class="ls-program-add-btn"
+                data-add-loc="<%= location.id %>"
+                aria-label="Ajouter une étape"
+              >+</button>
+              <p class="ls-program-add-hint">Cliquez pour ajouter une étape</p>
             </div>
           </div>
         </div>
+        <% } %>
       </div>
+      <% }); %>
     </div>
 
     <div class="story-section ">
@@ -323,6 +384,7 @@
   <%- include("footer.ejs") %>
 
   <script defer src="/js/register-toast.js"></script>
+  <script defer src="/js/program-tabs.js"></script>
 
   <script
     src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"

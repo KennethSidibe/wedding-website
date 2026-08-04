@@ -1,6 +1,6 @@
 # HANDOFF — LegendeSheridan wedding site
 
-**Last updated: 2026-08-01**
+**Last updated: 2026-08-03**
 
 > Scope note: the most recent session built the **admin page editor** (§8) and
 > then revised it against the owner's feedback after they used it. Everything is
@@ -24,6 +24,46 @@ Since 2026-08-01 the couple can also **edit the site's text, photos and button
 colours themselves**, from the site itself, without touching code. That is §8.
 
 ## 2. Current state
+
+**Regression pass before the 2026-08-03 commit (over HTTP, one clean server):**
+
+Everything in §9–§11 was re-checked against a running server before those
+changes were committed:
+
+- `/`, `/invitees`, `/give`, `/admin/login` → 200; `/admin` → 302 when logged
+  out. Every changed asset serves 200 with a `?v=1.13.0` cache-buster.
+- All nine `views/*.ejs` compile; all changed `.js` pass `node --check`.
+- A visitor's `/` and a visitor's `/?edit=1` are **byte-identical**, and neither
+  contains any `ls-slot`, edit-mode stylesheet, or programme hint text.
+- Admin flow: PIN login → `/admin` → `/admin/edit` → `/?edit=1` renders the
+  editor chrome (`#lsEditBar`, `#lsConfirm`, `#lsColorPicker`,
+  `#lsButtonOverlay`), 89 text slots, 8 photo slots and 18 hidden programme
+  rows. `/give?edit=1` gives 13 slots.
+- Save/reject paths: valid batch → `{"ok":true,"saved":3}`; unknown key
+  (`home.program.locC.*`) → 400; missing CSRF → 403; missing cookie → 401;
+  over-limit title → 400; empty **required** title → 400; empty **optional**
+  time → 200; `count: 999` clamps to 12 visible entries.
+- Upload: an SVG is refused with 400 before it is written; a PNG lands in
+  `public/uploads/` with a random name and serves 200. **Field name is `photo`,
+  not `image`** — `image` returns a 500 (`LIMIT_UNEXPECTED_FILE`), which is a
+  poor error for a plain field-name mistake but is not reachable from the real
+  editor.
+- Quitter → `/admin` and `/admin/edit` both 302 to the login and `/?edit=1`
+  becomes byte-identical to the anonymous page.
+- Reset (`page: "home"`, `includeSite: true`) restores all 100 keys.
+
+The `site_content` table and `public/uploads/` were both left **empty**, exactly
+as they were found: the post-reset visitor HTML was diffed against a capture
+taken before the first write and is byte-identical.
+
+**`npm test` fails, and it failed before these changes too.**
+`dataCreateInviteeValid.test.js` asserts that `null@null.com` is invalid;
+`deep-email-validator` now accepts it. `controllers/invitees.controller.js` is
+untouched by this work, so this is not a regression — but it does mean the suite
+is not currently a green baseline. See §7.
+
+**Still not verified in a browser** — nothing in §8.6, §9.6, §10.4 or §11.6 has
+been eyeballed. That gap is unchanged.
 
 **Verified working (2026-08-01, over HTTP — never seen in a browser):**
 
@@ -234,6 +274,24 @@ at boot by `middlewares/uploadImage.js` and is gitignored.
 
 ## 7. Traps
 
+- **`npm test` is red on `main` and has nothing to do with the editor.**
+  `dataCreateInviteeValid.test.js:16` expects `null@null.com` to be rejected;
+  `deep-email-validator` performs a live MX/SMTP lookup and now accepts it. The
+  assertion is network-dependent by construction. Do not "fix" unrelated code
+  chasing it — either stub the validator or drop that one assertion.
+- **Kill the old server before starting a new one.** `app.js` hardcodes port
+  8129 and a second instance does *not* fail loudly — the first one keeps the
+  port and answers every request, so you end up testing stale code with stale
+  env vars. An hour was lost on 2026-08-03 to an `ADMIN_PIN=…` override that
+  appeared to be ignored; it was simply going to a process that no longer had
+  the socket. Check with `lsof -nP -iTCP:8129 -sTCP:LISTEN` before trusting a
+  result, and `pkill -f "node app.js"` between runs.
+- **`POST /admin/upload` reads the file field `photo`.** Sending it as `image`
+  produces a multer `LIMIT_UNEXPECTED_FILE`, which the route funnels into a
+  **500** rather than a 400 — so a field-name typo looks like a server crash.
+- **`resetPageContent` reports `reset: keys.length`, not rows deleted.** A
+  reset of the home page always answers `100` whether or not anything was
+  stored. Do not read it as "100 rows were removed".
 - **`res.redirect('/')` after a POST defaults to 302**, which lets some clients
   re-issue the POST. The registration redirect is explicitly `303`. Keep it that
   way for any new POST-then-redirect route.
@@ -241,10 +299,11 @@ at boot by `middlewares/uploadImage.js` and is gitignored.
   undefined variable — EJS does not treat missing locals as `undefined` unless
   you guard with `typeof`. This is why the card block is wrapped in
   `typeof registered !== 'undefined'`.
-- **`views/index.ejs` has mismatched heading tags** (`<h2 …>…</h1>` on the date
-  rows, `<h4 …>…</h2>` on the locations). The browser recovers, but editing near
-  those lines is confusing — do not "fix" them incidentally without checking the
-  styling that hangs off `.dates-row h2` / `.dates-row h4` in `home.css`.
+- **The hero's mismatched heading tags are fixed** (they were `<h2 …>…</h1>`
+  and `<h4 …>…</h2>`). The block was rewritten on 2026-08-03 when the dates
+  moved to the corner of the photo, and the tags were closed properly at the
+  same time. Nothing changed structurally: `.dates-row h2` / `.dates-row h4` in
+  `home.css` target the elements the browser was already creating.
 - **`public/styles/admin.css` references `./fonts/cherolina/Cherolina.otf`**
   (relative) where every other stylesheet uses `/fonts/...` (absolute). The
   relative path resolves against `/styles/`, so that font almost certainly 404s
@@ -671,3 +730,350 @@ documented browser behaviour, and **none of them has been exercised on a real
 phone**. Touch remains the least-tested surface of this feature. The things most
 worth checking on a device: dragging the colour square, the two-tap button flow,
 and whether the keyboard covers the controls on a small screen.
+
+## 9. Editable Programme timeline (2026-08-03)
+
+The Programme is the one section whose **length** the admin controls: entries can
+be added and removed, not just re-worded.
+
+### 9.1 How it is modelled
+
+A **fixed pool of slots plus a count**, not a list:
+`home.program.count` (a `count`-type slot, 1–12) decides how many of
+`home.program.item1..12.{title,text}` are shown. `MAX_PROGRAM_ITEMS` in
+`constants/content.slots.js` is the ceiling; raising it is a one-line change.
+
+This was chosen over a single slot holding a JSON array so that the registry
+stays the security boundary — every writable key is still declared up front —
+and so the existing per-slot character limits, sanitiser, validation and reset
+logic all keep working untouched. A JSON slot would have needed its own copy of
+each.
+
+### 9.2 Why sides are decided by position
+
+Entry 1 is left, 2 is right, 3 is left, and so on, computed from the loop index.
+Nothing stores which side an entry is on. **This is what makes removal simple:**
+deleting an entry means shifting the later values up one slot, and the zig-zag
+then re-forms correctly on its own. Verified: removing the first of five leaves
+`L:Mairie R:Réception L:Brunch R:Départ`.
+
+### 9.3 Why the whole pool is rendered in edit mode
+
+In edit mode `views/index.ejs` renders all 12 entries and hides the ones past
+the count with `.ls-program-hidden` (`display: none`). Adding an entry is then
+*revealing markup the server already produced* — the editor never builds
+timeline HTML in JavaScript, which is the only way the editor's copy of the
+design could drift from the template's. Hidden rows take no space, so the add
+button always sits directly under the last visible entry.
+
+**Visitors receive only the entries actually shown.** The visitor's Programme
+markup was diffed against the previous hand-written version and is
+**byte-identical** — same margins, same `.vertical-line-v2`, `.circle-line` and
+`.circle-dash` placement, same `col-5` columns.
+
+### 9.4 The editor controls
+
+- A `+` in a dashed circle, centred on the timeline, carrying its own
+  `.vertical-line-v2` so the dashes run into it. Muted helper text underneath
+  ("Cliquez pour ajouter une étape"), styled like an input's description.
+- A small red `×` above each entry's heading, on the same side as its text.
+- Everything is absolutely positioned inside rows that were **already**
+  `position: relative`, so none of it can move the design.
+- A new entry starts as "Ajouter un titre" / "Ajouter une description" and the
+  caret is placed in the title automatically.
+
+### 9.5 The last-entry refusal
+
+Removing the only remaining entry is refused: the heading and description shake
+and a red message appears above them, like a rejected form field.
+
+Two things to keep:
+- The shake targets the `h4` and `p`, **not** the `.ls-slot` spans inside them.
+  `transform` is ignored on an inline box, so shaking the spans does nothing at
+  all. The selector deliberately excludes `.ls-program-error`.
+- The count is **clamped, not rejected**, server-side (`validateSlotValue`).
+  A tampered or buggy request can never produce zero entries or an unbounded
+  page; the client's refusal is UX, the clamp is the guarantee.
+
+### 9.6 Traps
+
+- `home.program.count` has no `.ls-slot` element, so `initTextSlots()` never
+  records it. Its baseline is seeded by hand in `edit-mode.js` — without that,
+  merely opening the editor would register as an unsaved change.
+- After a removal the freed trailing entry is reset to the placeholder, so a
+  later add starts blank instead of resurrecting text the admin deleted.
+- The conditional `data-program-row` attribute is written inline
+  (`...relative"<% if (editMode) { %> data-...<% } %>>`) rather than on its own
+  line, so the visitor's HTML has no stray whitespace. That is what makes the
+  byte-identical comparison in §9.3 hold; keep it on one line.
+
+**Verified over HTTP:** add, remove-first, remove-middle and reset all produce
+the right entries and sides; count 0 clamps to 1 and 999 clamps to 12;
+`home.program.item13.*` is rejected as unknown. **Not verified in a browser:**
+the shake, the add button's position on the line, and the caret landing in the
+new title.
+
+## 10. Programme: two ceremonies, times, placeholders (2026-08-03)
+
+### 10.1 Two timelines, one at a time
+
+The Programme now exists **once per ceremony**. `PROGRAM_LOCATIONS` in
+`constants/content.slots.js` defines them (`locA` = Abidjan, `locB` =
+Ouagadougou); every programme slot is scoped by that id:
+
+```
+home.program.<loc>.label            the tab's text (editable)
+home.program.<loc>.count            1..MAX_PROGRAM_ITEMS
+home.program.<loc>.item{1..12}.title / .time / .text
+```
+
+`id` appears in slot keys and in the DOM, so it must stay stable. **`label` is
+not editable** — the owner removed that on 2026-08-03: the two cities are fixed,
+and an editable label was one more thing to get wrong for no benefit. Renaming a
+ceremony is a one-word edit in `PROGRAM_LOCATIONS`.
+
+**Both panels are always rendered and switching is a class swap**, driven by
+`public/js/program-tabs.js`, which is loaded for **everyone**, not just the
+admin: comparing the two ceremonies is a feature of the site and should not cost
+a page load. It also means the editor can edit the hidden ceremony by bringing
+it to the front — there is no second rendering path to keep in step.
+`window.lsSelectProgramLocation(id)` is exposed for that.
+
+The tabs are `role="tablist"` with arrow-key navigation. They read as a control
+through weight and colour rather than a button box: muted when inactive, and a
+centre-out underline (`transform: scaleX`, so nothing reflows) on the active one.
+
+**There is deliberately no divider between the two names.** One was tried and
+removed on 2026-08-03: it sits at the boundary between the two buttons, which is
+not the centre of the pair — "Abidjan" and "Ouagadougou" are different widths —
+so it never lined up with the timeline's vertical line at 50%. Making it line up
+would mean forcing both tabs to equal width, which breaks the moment a label is
+renamed, and the labels are editable. The space between the names is each tab's
+own horizontal padding, held in `--tab-pad` on `.program-tabs` so the underline
+can inset from it and stay tied to the label's width; the mobile override
+changes that one variable rather than the padding and the insets separately.
+
+**Migration note:** this renamed every `home.program.item*` key. Rows written
+under the old names are orphans — harmless, since `getContentValue` only ever
+asks for keys in the registry — but the content they held is not carried over.
+The table was empty when this shipped.
+
+### 10.2 The per-entry time is optional
+
+`home.program.<loc>.item{n}.time` is the first slot with `optional: true`:
+
+- its default is `''`, and **an empty value is simply not rendered**, so adding
+  the field changed nothing on the live page — verified: a visitor's HTML
+  contained no `.program-time` element at all until a time was set;
+- `validateSlotValue` accepts empty for an optional slot instead of rejecting it
+  as "ne peut pas être vide";
+- `emptySlotExists()` skips optional slots, or a cleared time would block Save;
+- clearing one and saving really does remove it from the page again.
+
+It renders inside the heading's own `col-5`, so it inherits the row's
+left/right alignment and needs no per-side variants.
+
+### 10.3 Placeholders behave like placeholders
+
+A slot may declare `placeholder`. When its value is empty or still equal to that
+placeholder, the editor:
+
+- adds `.is-placeholder` (greyed and italic), so it reads as a hint, not as copy;
+- **selects the whole hint on focus**, so the first keystroke replaces it — this
+  is what the owner asked for: having to clear "Ajouter un titre" by hand before
+  typing was the complaint;
+- drops the styling on the first `input`;
+- for an *optional* slot, restores the placeholder on blur if left empty;
+- stores `''` rather than the placeholder text in `syncSlot`, so an untouched
+  hint is never published as if it were content.
+
+The selection is deferred with `setTimeout(…, 0)`: doing it inside the `focus`
+handler fights the browser's own caret placement, and on touch it fights the
+keyboard opening. **Only placeholder values are selected** — selecting real copy
+on focus would make a one-word correction dangerous.
+
+### 10.4 Traps
+
+- Each location's count is seeded into `baseline` by hand in
+  `edit-mode.js` (`initProgramControls`), as before — the count has no
+  `.ls-slot`, so nothing else records it, and without the seed merely opening
+  the editor registers as an unsaved change.
+- `programSlots()` identifies a row's three fields by matching the **end of the
+  slot key** (`/\.title$/`, `/\.time$/`, `/\.text$/`), not by DOM order. Adding
+  a fourth field per entry means adding it there too.
+- The tab click handler ignores clicks that land on a `.ls-slot`, so editing a
+  tab's label does not also switch ceremony.
+
+**Verified over HTTP:** two independent timelines with independent counts; times
+appear only when set and disappear when cleared; a renamed tab label; add and
+remove on one ceremony leaving the other untouched; `locC` rejected as unknown;
+count clamped; reset restoring all 102 keys; `/invitees` still byte-identical;
+anonymous `?edit=1` still inert; all navbar anchors intact.
+
+**Not verified in a browser:** the tab animation, the time's typography, the
+placeholder select-on-focus, and how the tabs look on a phone.
+
+### 10.5 The hero dates moved to the corner (2026-08-03)
+
+The two dates used to sit side by side, centred at the bottom of the hero photo,
+at Bootstrap's default heading sizes — small enough that they were easy to miss
+against the picture. They are now **stacked in the bottom-right, right-aligned,
+inset from the corner** rather than flush against it.
+
+- The wrapper is a plain `div`, **not a Bootstrap `.row`**. `.row` carries
+  negative horizontal margins that pull the block back out past the very inset
+  this layout depends on. The `col`/`row` classes were dropped with it.
+- The inset is `clamp()` on `padding-right` / `padding-bottom`, so it stays
+  proportional from a phone to a large monitor.
+- Both headings are sized explicitly with `clamp()` rather than left to
+  Bootstrap. `.location-title` is set nearly as large as the date because
+  **Pinyon Script is a script face and reads much smaller than its point size**;
+  at the old size it disappeared into the photograph.
+- The old `@media (width < 500px)` rules re-sized these headings in `em`, which
+  would fight the clamps — they now only tone down the drop-shadow, which is
+  what keeps the text legible over the image.
+
+### 10.6 Frosted panel behind the hero dates (2026-08-03)
+
+The dates now sit on a blurred patch of the photograph instead of carrying a
+hard offset shadow. Three things about it are load-bearing:
+
+- **The blur and its mask live on `.dates-row::before`, not on `.dates-row`.**
+  `mask-image` clips everything an element paints, so masking `.dates-row`
+  itself fades out the dates along with the blur — which is exactly what the
+  owner's mock-up accidentally showed. Keeping the effect on a layer of its own
+  leaves the text untouched.
+- **`.dates-row-item` is `position: relative` so the text paints above the
+  panel.** A positioned pseudo-element sits in the positioned-descendants layer,
+  which is *above* in-flow block content; without this the blur covers the
+  dates. If a new element is added inside `.dates-row`, it needs the same.
+- **The gradient background is the fallback, not decoration.** Where
+  `backdrop-filter` is unsupported it still darkens the corner enough to keep
+  the text readable, so nothing depends on the blur landing.
+
+The mask is a single radial gradient anchored at `100% 100%`, so the blur is
+solid under the text and dissolves into the photo in both directions at once —
+one gradient rather than two composited ones, which avoids `mask-composite`
+(patchy in Safari). `-webkit-` prefixes are present for both `backdrop-filter`
+and `mask-image`.
+
+`pointer-events: none` on the panel matters: the hero photo is an editable image
+slot, and the layer would otherwise swallow the hover that reveals its "Changer
+la photo" control.
+
+The old `filter: drop-shadow(8px 6px 0px black)` on the headings is gone — the
+panel does that job now, and the two together read as competing effects. A soft
+`text-shadow` remains as insurance over a bright patch of photo.
+
+On a phone the vertical padding is overridden in `rem` below 576px. This is a
+**units** problem, not a values one: the padding is in `vh`, measured against
+the viewport, but `.img-container` is `40vh` on mobile against `80vh` on
+desktop — so the same declaration takes about double the share of the photo.
+Measured, the block was 62% of the image on a 390x844 screen versus 38% on a
+laptop; the override brings it to 45%. The **left** padding stays generous
+(`2.75rem`) because that is the room the blur needs to fade out horizontally.
+
+**The same crowding exists on tablets and small laptops** and is not yet fixed:
+`.img-container` drops to `40vh` for everything under 1025px, so at 1024x768 the
+block works out at roughly 68% of the image. Extending the override up to
+`1025px` would be the consistent fix; it was left at 576px because only mobile
+was asked for.
+
+**Not verified in a browser.** Blur radius (`14px`), the mask's stops (`42%` /
+`80%`) and the tint opacity are the three numbers to tune if it reads too strong
+or too weak.
+
+## 11. Programme fields: click-to-replace and CSS hints (2026-08-03)
+
+### 11.1 Hints are drawn, not stored
+
+A programme field with no value is now **genuinely empty**. The hint ("Entrer un
+titre", "Entrer une description", "Entrer l'heure") is drawn by
+`.ls-slot[data-slot-placeholder]:empty::before` from an attribute, and is never
+a value.
+
+This replaced an earlier design where the hint was real text the editor selected
+on focus. Three things got better:
+
+- typing starts from a clean field instead of inside the hint;
+- the hint can never be saved as if it were content — there is no code path for
+  it, rather than a check that could be forgotten;
+- a visitor never sees it, because the server renders the slot empty.
+
+`default` for an unfilled entry is `''`, not the hint. `PROGRAM_PLACEHOLDER_*`
+are hint strings only.
+
+### 11.2 The disappearing box, fixed
+
+Deleting a title made its edit box vanish: an **empty inline span has zero width
+and height**, so the dashed outline collapsed to a point and there was nothing
+left to click. `.ls-slot:empty` is now `display: inline-block` with a
+`min-width` and `min-height`. Only *empty* fields get this, so nothing else in
+the page reflows.
+
+`normalizeIfBlank()` is the other half of it: contenteditable leaves a stray
+`<br>` behind when a field is emptied, which stops it matching `:empty` — and
+`:empty` is what draws the hint and holds the box open. Every path that can
+empty a field calls it.
+
+### 11.3 There is deliberately no clear-on-focus
+
+An earlier build of this feature emptied a field when it was focused, so the
+admin typed a replacement rather than editing in place. **It was removed the
+same day.** Two reasons, and both are worth keeping in mind before anything
+like it is tried again:
+
+- Clicking the whitespace *beside* a heading wiped it. The click lands on the
+  block's line box, and the browser maps that to the nearest editable position
+  — inside the field. A click that was never meant to touch the text destroyed
+  it. Restricting the hit area would have meant fighting normal caret placement.
+- These fields hold copy that gets **tweaked**, not values that get replaced.
+  Clearing on click is right for a disposable value; it is wrong when clicking
+  to fix a typo makes the sentence vanish.
+
+Clicking a field now simply puts the caret in it. The hint and the box-holding
+fixes in §11.1 and §11.2 are unaffected — they were the parts that mattered.
+
+### 11.4 The per-entry controls
+
+`×` and `↺` sit as a pair above each entry's heading. `↺` puts that entry's
+three fields back to their last **saved** values and is disabled when the entry
+has no unsaved change, so it never looks available when it would do nothing.
+`setPending()` keeps that state current.
+
+### 11.5 Save was permanently disabled — fixed
+
+`emptySlotExists()` walked **every** `.ls-slot` on the page, including the
+entries past each ceremony's count. Those are rendered but hidden, and since
+§11.1 they are empty by design — so the check found 36 empty required fields
+(18 hidden entries x 2), and Save stayed greyed out no matter how completely
+the visible programme was filled in.
+
+The check now skips anything inside `.ls-program-hidden`. A visible empty
+required field still blocks Save, which is correct, and the server still
+refuses an empty title independently.
+
+**This is the shape of bug to watch for**: rendering the whole pool is what
+makes adding an entry cheap (§9.3), but every piece of code that walks the DOM
+has to know that hidden entries are not part of the page.
+
+### 11.6 Two undos on the bar
+
+The footer now offers both, spelled out rather than both called "rétablir":
+
+- **Revenir à la dernière version enregistrée** — discards unsaved changes and
+  returns to what is published. Implemented as a reload, which is the honest
+  implementation: unsaved changes live only in the browser. Disabled when there
+  is nothing pending.
+- **Rétablir le contenu d'origine** — back to the content the site shipped
+  with, via `POST /admin/content/reset`. Immediate and irreversible.
+
+**Verified over HTTP:** hints never reach a visitor; empty fields render as
+truly empty elements so `:empty` matches; an empty title is refused by the
+server while an empty time is accepted; a filled new entry publishes correctly;
+body copy carries no `data-slot-clearable`.
+
+**Not verified in a browser** — and this section is almost entirely browser
+behaviour. Worth checking first: that clicking a title really clears it, that
+clicking away restores it, that the hint shows with the dashed box intact, and
+that `↺` enables only once something changes.
