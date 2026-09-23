@@ -9,14 +9,29 @@ import {
 import { getAllContent, upsertContent, deleteContent } from "../models/content.model.js";
 
 // Saved overrides, slot key -> value. Read on every render, so it has to be
-// synchronous: the templates cannot await. It is refreshed at boot and after
-// every write, and there is exactly one server process, so it cannot go stale.
+// synchronous: the templates cannot await.
 //
 // An empty cache is a valid state, not an error — every slot falls back to its
 // template default, and the site renders as it did before this feature. That is
 // deliberate: a database outage must never blank the wedding site.
 let contentCache = new Map();
 let cacheLoaded = false;
+let cacheLoadedAt = 0;
+let refreshInFlight = null;
+
+// This used to be refreshed only at boot and after a write made through the
+// app, on the assumption that nothing else ever changes the table and that
+// there is exactly one server process. Both assumptions break quietly:
+//
+//   - a row edited straight in phpMyAdmin is invisible until a restart;
+//   - under a cluster / PM2 with more than one worker, a save refreshes only
+//     the worker that handled it, and the others keep serving the old text.
+//
+// The symptom is the same either way and gives no clue: the page renders the
+// template default as if the couple had never edited anything. A revalidation
+// window makes it self-healing instead of needing someone to notice and
+// restart the server.
+const CACHE_TTL_MS = 60 * 1000;
 
 async function initContentCache() {
     try {
@@ -26,6 +41,31 @@ async function initContentCache() {
         console.error('Could not load site content, falling back to template defaults:', error.message);
         cacheLoaded = false;
     }
+    // Stamped on failure too, so a database that is down is retried once per
+    // window rather than on every single request.
+    cacheLoadedAt = Date.now();
+}
+
+// Kicks off a reload when the cache is older than the window, and returns
+// immediately without waiting for it.
+//
+// Fire-and-forget is the point, not a shortcut: getContentValue() is called
+// from inside the templates and cannot await, and renders are deliberately
+// DB-free so an unreachable MySQL costs nothing at render time. The request
+// that finds the cache stale still renders what is in memory; the next one
+// gets the fresh values. Combined with the revalidation that htmlCache.js
+// forces on the browser, an out-of-band edit shows up within the window
+// without a restart.
+//
+// `refreshInFlight` is a single-flight guard — without it a burst of traffic
+// arriving on a stale cache would fire one SELECT per request.
+function refreshContentCacheIfStale() {
+    if (refreshInFlight != null) return;
+    if (Date.now() - cacheLoadedAt < CACHE_TTL_MS) return;
+
+    refreshInFlight = initContentCache()
+        .catch(() => { /* initContentCache already logs and degrades */ })
+        .finally(() => { refreshInFlight = null; });
 }
 
 function isContentLoaded() {
@@ -156,6 +196,40 @@ const IMAGE_PATH_PATTERN = /^\/(img|uploads)\/[A-Za-z0-9/_.-]+$/;
 
 const COLOR_PATTERN = /^#[0-9a-fA-F]{6}$/;
 
+// Map links. This value ends up in an `href`, which is the one place in this
+// codebase where admin input becomes something the browser will *act* on
+// rather than display, so it is validated harder than any other slot:
+//
+//   - `https:` only. This is the part that matters. Escaping alone would not
+//     stop `javascript:…`, which executes on click with the page's own origin.
+//     Anything that is not an https URL is refused outright.
+//   - a host allowlist, so a slot cannot be turned into a link to a
+//     third-party site — the same reasoning as IMAGE_PATH_PATTERN above. It
+//     covers what Google's own "Share" button actually hands you:
+//     maps.app.goo.gl and goo.gl short links, and google.<tld>/maps for any
+//     country domain (google.ci and google.bf matter here).
+//
+// Parsed with URL rather than matched with one big regex: a regex over a whole
+// URL has to get userinfo, ports and backslashes right to be safe, and
+// `https://google.com@evil.example/` is exactly the sort of thing it gets
+// wrong. The parser already knows what the host is.
+const MAP_HOST_PATTERN = /^(?:(?:www|maps)\.)?google\.[a-z]{2,3}(?:\.[a-z]{2})?$/;
+const MAP_SHORT_HOSTS = new Set(['maps.app.goo.gl', 'goo.gl']);
+
+function validateMapUrl(value) {
+    let parsed;
+    try {
+        parsed = new URL(value);
+    } catch {
+        return false;
+    }
+
+    if (parsed.protocol !== 'https:') return false;
+
+    const host = parsed.hostname.toLowerCase();
+    return MAP_SHORT_HOSTS.has(host) || MAP_HOST_PATTERN.test(host);
+}
+
 // Returns { value } on success or { error } on rejection. Every write goes
 // through here, including the upload endpoint's result — the client is never
 // trusted, even though the client is the admin's own browser.
@@ -190,6 +264,24 @@ function validateSlotValue(key, rawValue) {
 
         const clamped = Math.min(Math.max(value, slot.min), slot.max);
         return { value: String(clamped) };
+    }
+
+    if (slot.type === SLOT_TYPE.URL) {
+        const value = rawValue.trim();
+
+        // Every URL slot is optional; clearing the field removes the link and
+        // leaves the place as plain text.
+        if (value.length === 0) return { value: '' };
+
+        if (value.length > slot.max) {
+            return { error: `« ${slot.label} » est trop long` };
+        }
+        if (!validateMapUrl(value)) {
+            return {
+                error: `« ${slot.label} » doit être un lien Google Maps en https://`
+            };
+        }
+        return { value };
     }
 
     if (slot.type === SLOT_TYPE.IMAGE) {
@@ -307,6 +399,7 @@ async function resetContentKeys(keys) {
 export {
     CONTENT_SLOTS,
     initContentCache,
+    refreshContentCacheIfStale,
     isContentLoaded,
     getContentValue,
     hasOverride,

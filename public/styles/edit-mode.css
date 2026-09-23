@@ -1135,3 +1135,228 @@ html[data-theme="dark"] .ls-program-revert {
 .ls-edit-link-btn:disabled:hover {
     color: #64748b;
 }
+
+/* ------------------------------------------------------- map link button
+
+   Sits beside a programme entry's place in edit mode only. It is the whole
+   affordance for the map link: the URL itself is never rendered on the page,
+   so without this button a link that exists would be invisible.
+
+   It was a 22px icon and that was wrong twice over — too small to notice next
+   to body copy, and unable to say which of its two states it was in without a
+   hover. It is now a labelled pill that says the state in words, repeats it
+   with a tick, and repeats it again with the fill. */
+
+.ls-map-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.33rem;
+
+    padding: 0.28rem 0.6rem;
+    flex: 0 0 auto;
+
+    font-family: "Nunito", system-ui, sans-serif;
+    font-size: 0.72rem;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: 0.01em;
+    white-space: nowrap;
+
+    color: var(--ls-edit-blue, #2563eb);
+    background: rgba(37, 99, 235, 0.08);
+    border: 1px dashed rgba(37, 99, 235, 0.55);
+    border-radius: 999px;
+    cursor: pointer;
+
+    transition: background 0.15s ease, border-color 0.15s ease,
+                box-shadow 0.15s ease, transform 0.12s ease;
+}
+
+.ls-map-btn:hover {
+    background: rgba(37, 99, 235, 0.16);
+    border-color: var(--ls-edit-blue, #2563eb);
+    transform: translateY(-1px);
+}
+
+.ls-map-btn:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.3);
+}
+
+.ls-map-btn:active {
+    transform: translateY(0);
+}
+
+.ls-map-btn-icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+.ls-map-btn-tick {
+    display: inline-flex;
+    flex: 0 0 auto;
+}
+
+/* Solid, not dashed, once a link is set: dashed reads as "empty slot"
+   everywhere else in this editor, so it has to stop reading that way here.
+   Green rather than blue because it reports a result, not an invitation. */
+.ls-map-btn.has-link {
+    color: #fff;
+    background: #15803d;
+    border-style: solid;
+    border-color: #15803d;
+}
+
+.ls-map-btn.has-link:hover {
+    background: #166f38;
+    border-color: #166f38;
+}
+
+.ls-map-btn.has-link:focus-visible {
+    box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.32);
+}
+
+/* The right-hand entries' place line is right-aligned, and a wrapped pill
+   under a short place name should follow it rather than sit under the pin. */
+.program-place-line.text-end .ls-map-btn {
+    margin-left: auto;
+}
+
+@media (max-width: 576px) {
+    .ls-map-btn {
+        font-size: 0.68rem;
+        padding: 0.25rem 0.5rem;
+    }
+}
+
+/* ------------------------------------------------------- map link dialog */
+
+.ls-link-editor {
+    position: fixed;
+    inset: 0;
+    z-index: var(--ls-z-modal);
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    padding: 1rem;
+}
+
+.ls-link-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.55);
+    backdrop-filter: blur(2px);
+}
+
+.ls-link-card {
+    position: relative;
+
+    width: min(100%, 460px);
+    padding: 1.6rem 1.6rem 1.25rem;
+
+    font-family: "Nunito", system-ui, sans-serif;
+
+    background: #fff;
+    border-radius: 24px;
+    box-shadow: 0 26px 70px rgba(15, 23, 42, 0.4);
+
+    animation: ls-confirm-in 0.18s cubic-bezier(0.2, 0.8, 0.3, 1);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .ls-link-card { animation-duration: 0.01ms; }
+}
+
+.ls-link-title {
+    margin: 0 0 0.4rem;
+    font-size: 1.12rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ls-link-text {
+    margin: 0 0 0.9rem;
+    font-size: 0.86rem;
+    line-height: 1.5;
+    color: #475569;
+}
+
+.ls-link-input {
+    width: 100%;
+    padding: 0.6rem 0.75rem;
+
+    font-family: inherit;
+    font-size: 0.9rem;
+    color: #0f172a;
+
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+}
+
+.ls-link-input:focus {
+    outline: none;
+    border-color: var(--ls-edit-blue, #2563eb);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.16);
+}
+
+.ls-link-error {
+    margin: 0.55rem 0 0;
+    font-size: 0.82rem;
+    color: #b42318;
+}
+
+.ls-link-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+
+    margin-top: 1.1rem;
+}
+
+/* Pushes Annuler/Valider to the right and keeps "Retirer le lien" on the
+   left, where a destructive action is out of the path to the primary one. */
+.ls-link-spacer {
+    flex: 1 1 auto;
+}
+
+/* Live "this link is valid" note in the map dialog, with the anchor that
+   opens it so the admin can confirm it points where they think it does. */
+.ls-link-ok {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+
+    margin: 0.55rem 0 0;
+    font-size: 0.82rem;
+    color: #15803d;
+}
+
+.ls-link-ok-mark {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    width: 17px;
+    height: 17px;
+    flex: 0 0 auto;
+
+    font-size: 0.72rem;
+    color: #fff;
+    background: #15803d;
+    border-radius: 50%;
+}
+
+.ls-link-test {
+    color: var(--ls-edit-blue, #2563eb);
+    font-weight: 700;
+    text-decoration: underline;
+}
+
+.ls-link-test:hover {
+    color: var(--ls-edit-blue-dark, #1d4ed8);
+}

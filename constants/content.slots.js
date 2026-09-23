@@ -21,6 +21,7 @@
 //   image - a URL under /img/ or /uploads/.
 //   count - a whole number within [min, max]. Used for the length of a
 //           repeating section, not for anything the visitor reads.
+//   url   - an https:// link to a map. Host-restricted, see MAP_URL_PATTERN.
 //   color - a #rrggbb value, injected as a CSS custom property. Deliberately
 //           limited to the buttons: the owner asked on 2026-08-01 that body and
 //           heading text keep the colours the design gives them, so there is no
@@ -30,11 +31,11 @@ const SLOT_TYPE = {
     RICH: 'rich',
     IMAGE: 'image',
     COLOR: 'color',
-    COUNT: 'count'
+    COUNT: 'count',
+    URL: 'url'
 };
 
-// The Programme timeline is the one section whose length the admin controls,
-// and the only one that exists twice — once per ceremony.
+// The Programme timeline is the one section whose length the admin controls.
 //
 // It is modelled as a fixed pool of slots plus a count, rather than as a list:
 // that keeps this registry the security boundary (every writable key is still
@@ -48,13 +49,27 @@ const SLOT_TYPE = {
 const MAX_PROGRAM_ITEMS = 12;
 const MIN_PROGRAM_ITEMS = 1;
 
-// The two ceremonies. `id` appears in slot keys and in the DOM, so it must stay
-// stable. `label` is the tab's text and is deliberately **not** editable: the
-// two cities are fixed, and an editable label would be one more thing to get
-// wrong for no benefit. Changing a name is a one-word edit here.
+// The programme is ONE timeline (changed 2026-09-22). It used to be two, one
+// per city, behind a tab bar. Each entry now carries its own place and map
+// link, which is what made the split unnecessary: an entry says where it is,
+// so the guest does not have to pick a city first to find out.
+//
+// `id` appears in every programme slot key and in the DOM. It stays `locA`
+// **on purpose** even though there is no longer an A and a B: the couple's
+// saved entries are stored under `home.program.locA.*`, and renaming the
+// prefix would orphan every one of them — the row would still be in the table
+// but never read again, and the page would silently fall back to the template
+// default. See §12.4 of HANDOFF.md.
+//
+// The old Ouagadougou entries live under `home.program.locB.*` and are not
+// rendered any more. `scripts/merge-program.js` appends them to this timeline;
+// until it is run they are inert rows, not lost ones.
+//
+// The array is kept as an array, and the tab bar is rendered only when it has
+// more than one entry, so going back to per-city timelines is a matter of
+// pushing a second object here.
 const PROGRAM_LOCATIONS = [
-    { id: 'locA', label: 'Abidjan' },
-    { id: 'locB', label: 'Ouagadougou' }
+    { id: 'locA', label: 'Programme' }
 ];
 
 // Placeholder text for the programme fields.
@@ -67,6 +82,7 @@ const PROGRAM_LOCATIONS = [
 const PROGRAM_PLACEHOLDER_TITLE = 'Entrer un titre';
 const PROGRAM_PLACEHOLDER_TEXT = 'Entrer une description';
 const PROGRAM_PLACEHOLDER_TIME = "Entrer l'heure";
+const PROGRAM_PLACEHOLDER_PLACE = 'Entrer le lieu';
 
 // The three entries the site shipped with; everything past them starts as a
 // placeholder. Both ceremonies start from the same outline.
@@ -127,6 +143,35 @@ function buildProgramSlots() {
                 max: 320,
                 placeholder: PROGRAM_PLACEHOLDER_TEXT,
                 default: preset === null ? '' : preset.text
+            });
+
+            // Where this step happens. Optional and empty by default, so the
+            // line simply is not rendered until the couple fills it in and
+            // nothing about the existing programme changes.
+            //
+            // It is a separate field rather than part of `.text` because the
+            // map link needs something to attach to. The couple had already
+            // started putting addresses in `.text` for want of anywhere
+            // better — that is what prompted this field.
+            slots.push({
+                key: `${prefix}.place`,
+                type: SLOT_TYPE.TEXT,
+                label: `${location.label} — lieu ${index}`,
+                max: 70,
+                optional: true,
+                placeholder: PROGRAM_PLACEHOLDER_PLACE,
+                default: ''
+            });
+
+            // The map link for that place. Optional: a place with no link is
+            // rendered as plain text, so the two fields are independent.
+            slots.push({
+                key: `${prefix}.map`,
+                type: SLOT_TYPE.URL,
+                label: `${location.label} — lien carte ${index}`,
+                max: 500,
+                optional: true,
+                default: ''
             });
         }
     }

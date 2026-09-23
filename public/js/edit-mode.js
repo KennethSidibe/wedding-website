@@ -956,26 +956,65 @@
     // because which side an entry sits on is decided by its position, not by
     // its content.
 
-    var PROGRAM_PLACEHOLDERS = {
-        title: "Ajouter un titre",
-        time: "Ajouter une heure",
-        text: "Ajouter une description"
-    };
-
     // locationId -> { rows, count, addRow, addButton }
     var programs = {};
 
+    // An entry's four editable text fields plus its map button. The map is a
+    // button rather than a .ls-slot because a URL is replaced wholesale and is
+    // never shown to a visitor — see the dialog in edit-bar.ejs. Everything
+    // that moves an entry around (copy, reset, revert) has to handle all five,
+    // or shifting a row up would leave its place and its link behind on the
+    // row below.
     function programSlots(row) {
-        var slots = { title: null, time: null, text: null };
+        var slots = { title: null, time: null, text: null, place: null, mapButton: null };
 
         row.querySelectorAll(".ls-slot").forEach(function (element) {
             var key = element.dataset.slot || "";
             if (/\.title$/.test(key)) slots.title = element;
             else if (/\.time$/.test(key)) slots.time = element;
             else if (/\.text$/.test(key)) slots.text = element;
+            else if (/\.place$/.test(key)) slots.place = element;
         });
 
+        slots.mapButton = row.querySelector(".ls-map-btn");
+
         return slots;
+    }
+
+    // ------------------------------------------------------- map links
+
+    function mapValue(button) {
+        return button == null ? "" : (button.dataset.mapValue || "");
+    }
+
+    // The button carries its own value and its own look. Kept in one place so
+    // the dialog, a row shift and a revert cannot disagree about either.
+    //
+    // The state is said three ways — the words, the tick and the fill —
+    // because the words alone are missed when scanning and the colour alone
+    // fails for anyone who cannot rely on it.
+    function setMapValue(button, value) {
+        if (button == null) return;
+
+        var next = value || "";
+        var hasLink = next !== "";
+
+        button.dataset.mapValue = next;
+        button.classList.toggle("has-link", hasLink);
+
+        var label = button.querySelector(".ls-map-btn-label");
+        if (label != null) {
+            label.textContent = hasLink ? "Lien Maps ajouté" : "Ajouter le lien Maps";
+        }
+
+        var tick = button.querySelector(".ls-map-btn-tick");
+        if (tick != null) tick.hidden = !hasLink;
+
+        button.title = hasLink
+            ? "Modifier ou retirer le lien Google Maps"
+            : "Ajouter un lien Google Maps";
+
+        setPending(button.dataset.mapSlot, next);
     }
 
     // Writes a value into a slot element and re-runs the normal dirty-tracking,
@@ -1005,6 +1044,10 @@
         if (from.time != null && to.time != null) {
             setSlotValue(to.time, from.time.textContent, false);
         }
+        if (from.place != null && to.place != null) {
+            setSlotValue(to.place, from.place.textContent, false);
+        }
+        setMapValue(to.mapButton, mapValue(from.mapButton));
     }
 
     // A new or freed entry starts empty, so each of its fields shows its hint.
@@ -1013,6 +1056,8 @@
         setSlotValue(slots.title, "", false);
         setSlotValue(slots.text, "", true);
         if (slots.time != null) setSlotValue(slots.time, "", false);
+        if (slots.place != null) setSlotValue(slots.place, "", false);
+        setMapValue(slots.mapButton, "");
     }
 
     // The ↺ button: puts an entry's three fields back to what is currently
@@ -1026,7 +1071,7 @@
 
         var slots = programSlots(row);
 
-        [slots.title, slots.time, slots.text].forEach(function (element) {
+        [slots.title, slots.time, slots.text, slots.place].forEach(function (element) {
             if (element == null) return;
 
             var saved = baseline.get(element.dataset.slot);
@@ -1034,6 +1079,11 @@
 
             setSlotValue(element, saved, element.dataset.slotType === "rich");
         });
+
+        if (slots.mapButton != null) {
+            var savedMap = baseline.get(slots.mapButton.dataset.mapSlot);
+            setMapValue(slots.mapButton, savedMap == null ? "" : savedMap);
+        }
 
         updateRevertState(locationId);
     }
@@ -1048,9 +1098,13 @@
             if (button == null) return;
 
             var slots = programSlots(row);
-            var dirty = [slots.title, slots.time, slots.text].some(function (element) {
+            var dirty = [slots.title, slots.time, slots.text, slots.place].some(function (element) {
                 return element != null && pending.has(element.dataset.slot);
             });
+
+            if (!dirty && slots.mapButton != null) {
+                dirty = pending.has(slots.mapButton.dataset.mapSlot);
+            }
 
             button.disabled = !dirty;
         });
@@ -1149,6 +1203,162 @@
 
         program.count -= 1;
         refreshProgramUi(locationId);
+    }
+
+    // --------------------------------------------------- map link dialog
+
+    // Mirrors validateMapUrl() in controllers/content.controller.js. The server
+    // is still the authority — this only exists so a typo is caught while the
+    // admin is looking at the field, instead of failing the whole save later.
+    // If you change the rules there, change them here too.
+    var MAP_HOST_PATTERN = /^(?:(?:www|maps)\.)?google\.[a-z]{2,3}(?:\.[a-z]{2})?$/;
+    var MAP_SHORT_HOSTS = ["maps.app.goo.gl", "goo.gl"];
+
+    function isMapUrl(value) {
+        var parsed;
+        try {
+            parsed = new URL(value);
+        } catch (error) {
+            return false;
+        }
+
+        if (parsed.protocol !== "https:") return false;
+
+        var host = parsed.hostname.toLowerCase();
+        return MAP_SHORT_HOSTS.indexOf(host) !== -1 || MAP_HOST_PATTERN.test(host);
+    }
+
+    var linkEditor = document.getElementById("lsLinkEditor");
+    var linkInput = document.getElementById("lsLinkInput");
+    var linkError = document.getElementById("lsLinkError");
+    var linkOkNote = document.getElementById("lsLinkOkNote");
+    var linkTest = document.getElementById("lsLinkTest");
+    var linkButtonTarget = null;
+
+    function showLinkError(message) {
+        if (linkError == null) return;
+        linkError.textContent = message;
+        linkError.hidden = message === "";
+    }
+
+    // Runs on every keystroke: an empty field is neutral (clearing the link is
+    // a legitimate outcome), a valid one offers the anchor to check it, and an
+    // invalid one is only called out once there is enough typed to judge.
+    function refreshLinkFeedback() {
+        var value = linkInput.value.trim();
+
+        if (value === "") {
+            showLinkError("");
+            if (linkOkNote != null) linkOkNote.hidden = true;
+            return;
+        }
+
+        if (isMapUrl(value)) {
+            showLinkError("");
+            if (linkTest != null) linkTest.href = value;
+            if (linkOkNote != null) linkOkNote.hidden = false;
+            return;
+        }
+
+        if (linkOkNote != null) linkOkNote.hidden = true;
+
+        // Quiet until the value looks finished, so the message does not flash
+        // on every character of a URL being typed or pasted in pieces.
+        if (value.length > 12) {
+            showLinkError("Ce lien n'est pas un lien Google Maps en https://.");
+        } else {
+            showLinkError("");
+        }
+    }
+
+    function openLinkEditor(button) {
+        if (linkEditor == null) return;
+
+        linkButtonTarget = button;
+        linkInput.value = mapValue(button);
+        linkEditor.hidden = false;
+        refreshLinkFeedback();
+
+        // Focus after the dialog is visible or the browser has nothing to
+        // focus; select() so pasting over an existing link is one gesture.
+        window.setTimeout(function () {
+            linkInput.focus();
+            linkInput.select();
+        }, 0);
+    }
+
+    function closeLinkEditor() {
+        if (linkEditor == null) return;
+        linkEditor.hidden = true;
+        linkButtonTarget = null;
+    }
+
+    function commitLinkEditor() {
+        if (linkButtonTarget == null) return;
+
+        var value = linkInput.value.trim();
+
+        if (value !== "" && !isMapUrl(value)) {
+            showLinkError("Ce lien n'est pas un lien Google Maps en https://.");
+            return;
+        }
+
+        setMapValue(linkButtonTarget, value);
+
+        // The ↺ on the entry has to notice a link change like any other edit.
+        var row = linkButtonTarget.closest("[data-program-row]");
+        if (row != null) updateRevertState(row.dataset.programLoc);
+
+        closeLinkEditor();
+    }
+
+    function initLinkEditor() {
+        if (linkEditor == null) return;
+
+        document.querySelectorAll(".ls-map-btn").forEach(function (button) {
+            // Not a .ls-slot, so initTextSlots() never recorded it. Seed it by
+            // hand or the first change would have nothing to compare against
+            // and clearing a link would not register as an edit.
+            baseline.set(button.dataset.mapSlot, mapValue(button));
+
+            button.addEventListener("click", function (event) {
+                event.preventDefault();
+                openLinkEditor(button);
+            });
+        });
+
+        document.getElementById("lsLinkOk").addEventListener("click", commitLinkEditor);
+        document.getElementById("lsLinkCancel").addEventListener("click", closeLinkEditor);
+
+        document.getElementById("lsLinkRemove").addEventListener("click", function () {
+            linkInput.value = "";
+            commitLinkEditor();
+        });
+
+        linkEditor.querySelectorAll("[data-link-cancel]").forEach(function (element) {
+            element.addEventListener("click", closeLinkEditor);
+        });
+
+        // Opens in a new tab; the dialog stays as it is so the admin can come
+        // back and press Valider. Without this the global anchor handler in
+        // this file would swallow the click.
+        if (linkTest != null) {
+            linkTest.addEventListener("click", function (event) {
+                event.stopPropagation();
+            });
+        }
+
+        linkInput.addEventListener("input", refreshLinkFeedback);
+
+        linkInput.addEventListener("keydown", function (event) {
+            if (event.key === "Enter") {
+                event.preventDefault();
+                commitLinkEditor();
+            } else if (event.key === "Escape") {
+                event.preventDefault();
+                closeLinkEditor();
+            }
+        });
     }
 
     function initProgramControls() {
@@ -1474,6 +1684,7 @@
 
     // ---------------------------------------------------------------- init
 
+    initLinkEditor();
     initTextSlots();
     initDeferredLabels();
     initImageSlots();
@@ -1503,6 +1714,13 @@
     // Ctrl/Cmd+S is the reflex for anything that looks like an editor.
     document.addEventListener("keydown", function (event) {
         if (isConfirmOpen()) return;
+
+        // A modal is open over the page: saving from under it would commit a
+        // link the admin has not finished typing.
+        if (linkEditor != null && !linkEditor.hidden) {
+            if (event.key === "Escape") closeLinkEditor();
+            return;
+        }
 
         if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === "s") {
             event.preventDefault();

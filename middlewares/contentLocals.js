@@ -10,7 +10,8 @@ import {
     getContentValue,
     getColorVariables,
     escapeHtml,
-    hasOverride
+    hasOverride,
+    refreshContentCacheIfStale
 } from "../controllers/content.controller.js";
 import { isAdminAuthenticated, getCsrfToken, isEditorSessionOpen } from "./adminAuth.js";
 
@@ -32,6 +33,13 @@ const EDITABLE_PAGES = new Map([
 ]);
 
 export function contentLocals(req, res, next) {
+
+    // Non-blocking: this returns before the reload finishes, so it adds no
+    // latency and no database dependency to the render. It only matters for
+    // changes that did not come through this process — see
+    // refreshContentCacheIfStale() for why those happen. Static files are
+    // served before this middleware, so it runs once per page, not per asset.
+    refreshContentCacheIfStale();
 
     // Edit mode needs four things: an editable page, `?edit=1`, the admin
     // cookie, and an editor session opened from the dashboard. The fourth is
@@ -107,6 +115,13 @@ export function contentLocals(req, res, next) {
     // The URL for an image slot. The template also carries a data-img-slot
     // attribute, which is what the editor hooks its overlay onto.
     res.locals.imgSrc = (key) => escapeHtml(getContentValue(key));
+
+    // The href for a map slot. The value was already restricted to an https
+    // Google Maps host by validateSlotValue() when it was written — this only
+    // escapes it for the attribute. Both halves are needed: validation stops
+    // `javascript:` getting in, escaping stops a quote breaking out of the
+    // attribute. Never render a url slot with <%= %> straight from the cache.
+    res.locals.slotUrl = (key) => escapeHtml(getContentValue(key));
 
     res.locals.hasOverride = hasOverride;
 

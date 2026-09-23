@@ -158,6 +158,63 @@
   </div>
 </div>
 
+<%
+  // The map-link editor, opened by the link button beside a programme entry's
+  // place. A dialog rather than an inline contenteditable, for two reasons: a
+  // URL is a value that gets replaced wholesale rather than copy that gets
+  // edited, and it must not be shown to a visitor at all — the place text is
+  // what they read, the URL is only what the click does.
+%>
+<div id="lsLinkEditor" class="ls-link-editor" hidden>
+  <div class="ls-link-backdrop" data-link-cancel></div>
+
+  <div
+    class="ls-link-card"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="lsLinkTitle"
+  >
+    <h3 class="ls-link-title" id="lsLinkTitle">Lien Google Maps</h3>
+    <p class="ls-link-text">
+      Ouvrez le lieu dans Google&nbsp;Maps, appuyez sur «&nbsp;Partager&nbsp;»,
+      puis copiez le lien ici. Les invités pourront ouvrir l'itinéraire d'un
+      seul geste.
+    </p>
+
+    <input
+      type="url"
+      id="lsLinkInput"
+      class="ls-link-input"
+      placeholder="https://maps.app.goo.gl/..."
+      spellcheck="false"
+      autocomplete="off"
+    />
+
+    <p class="ls-link-error" id="lsLinkError" hidden></p>
+
+    <%
+      // Live feedback on what was pasted, so the admin finds out the link is
+      // wrong here rather than when the whole save is rejected. The anchor is
+      // the only way to be sure the link points where they think it does —
+      // a Maps share link is opaque, so "it parses" is not "it is correct".
+    %>
+    <p class="ls-link-ok" id="lsLinkOkNote" hidden>
+      <span class="ls-link-ok-mark" aria-hidden="true">&check;</span>
+      Lien Google&nbsp;Maps valide.
+      <a id="lsLinkTest" class="ls-link-test" href="#" target="_blank" rel="noopener noreferrer">
+        Ouvrir pour vérifier
+      </a>
+    </p>
+
+    <div class="ls-link-actions">
+      <button type="button" class="ls-edit-link-btn" id="lsLinkRemove">Retirer le lien</button>
+      <span class="ls-link-spacer"></span>
+      <button type="button" class="ls-edit-btn" id="lsLinkCancel">Annuler</button>
+      <button type="button" class="ls-edit-btn ls-edit-btn-primary" id="lsLinkOk">Valider</button>
+    </div>
+  </div>
+</div>
+
 <input type="file" id="lsImageInput" accept="image/jpeg,image/png,image/webp,image/gif" hidden />
 
 <!-- Character counter, shown next to the field being edited only when the

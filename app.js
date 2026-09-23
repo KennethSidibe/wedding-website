@@ -11,6 +11,7 @@ import { readFileSync } from 'fs';
 import { cacheBusting } from "./middlewares/cacheBusting.js";
 import { staticCache } from "./middlewares/staticCache.js";
 import { lazyLoad } from "./middlewares/lazyLoad.js";
+import { htmlCache } from "./middlewares/htmlCache.js";
 import { contentLocals } from "./middlewares/contentLocals.js";
 import { uploadImage, UPLOAD_URL_PREFIX, MAX_UPLOAD_BYTES } from "./middlewares/uploadImage.js";
 import {
@@ -36,6 +37,12 @@ app.use(bodyParser.urlencoded({extended:true}));
 app.use(express.json());
 
 app.use(staticCache(publicPath));
+
+// After staticCache on purpose: files under public/ are served above and
+// never reach this, so the headers set there stay intact. Everything that
+// gets past it is a rendered page or an API response.
+app.use(htmlCache);
+
 app.use(cacheBusting);
 
 // Must come after the body parsers (the write endpoints read req.body) and

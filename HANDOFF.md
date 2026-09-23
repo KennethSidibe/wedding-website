@@ -1,13 +1,30 @@
 # HANDOFF — LegendeSheridan wedding site
 
-**Last updated: 2026-08-03**
+**Last updated: 2026-09-22**
 
-> Scope note: the most recent session built the **admin page editor** (§8) and
-> then revised it against the owner's feedback after they used it. Everything is
-> exercised end-to-end over HTTP — login, the editor-session gate, save, upload,
-> reset, and the rejection paths — but **no page was ever opened in a real
-> browser by the agent**, so the editor's appearance and its in-place typing
-> behaviour remain unverified from this side. See §8.6.
+> Scope note: the 2026-09-22 session replaced the two-city programme with **one
+> timeline whose entries each carry a place and a Google Maps link** (§13), and
+> migrated the couple's Ouagadougou entries onto it. **The migration has not
+> been run against production yet — see §13.5; until it is, their Ouagadougou
+> entries are in the database but not on the page.**
+>
+> (Revised later the same day: the map-link control was an icon and is now a
+> labelled pill — §13.7.)
+>
+> The 2026-09-18 session fixed a **stale-content bug** — the couple
+> edited the Programme, the rows were in the production database, and the site
+> kept serving the template defaults. Two causes, both fixed and verified
+> end-to-end: rendered pages sent no `Cache-Control` at all, and the server's
+> content cache only reloaded at boot. See **§12**. It also added
+> `scripts/content-audit.js`, which reports what the couple has actually
+> changed. No feature work was done in that session.
+>
+> The 2026-08-03 session built the **admin page editor** (§8) and then revised
+> it against the owner's feedback after they used it. Everything is exercised
+> end-to-end over HTTP — login, the editor-session gate, save, upload, reset,
+> and the rejection paths — but **no page was ever opened in a real browser by
+> the agent**, so the editor's appearance and its in-place typing behaviour
+> remain unverified from this side. See §8.6.
 >
 > Earlier sessions produced the "Merci" confirmation card and the dark theme;
 > those are described below and were also verified HTTP-only.
@@ -263,8 +280,12 @@ at boot by `middlewares/uploadImage.js` and is gitignored.
    `/admin/login`, `/admin`) and fix contrast. The likely trouble spots are the
    photo-backed sections — the hero, the `/invitees` form panel and the footer
    all put white text on an image and were left untouched. Blocking: nothing.
-3. Replace the `Lorem ipsum` programme entries — now doable from the editor
-   rather than in code. Blocking: the couple's actual schedule.
+3. Replace the **remaining** `Lorem ipsum` programme entries. The couple began
+   this themselves on 2026-09-13 (Abidjan item 1 is "Cérémonie de Dot",
+   Ouagadougou item 1 is "Mariage traditionnel"), but `home.program.locA.item3`
+   is still literally `Titre 3` / `Lorem ipsum`. Run
+   `node scripts/content-audit.js --env=config/.prod.env` to see exactly where
+   they stopped. Blocking: the rest of the couple's schedule.
 4. Reconcile the conflicting wedding dates between the hero and the Notre
    Mariage paragraph. Blocking: which date is correct.
 5. Add a `.env.example` listing the variable names in §3, including `NODE_ENV`.
@@ -274,6 +295,18 @@ at boot by `middlewares/uploadImage.js` and is gitignored.
 
 ## 7. Traps
 
+- **Content the couple saved can silently stop appearing, and the page gives no
+  hint that anything is wrong** — it renders the template defaults as if they
+  had never edited anything. Two separate caches cause this; both are now
+  mitigated, and **§12 is the whole story**. The fast checks:
+  `node scripts/content-audit.js --env=config/.prod.env` to confirm the rows
+  exist, then `curl -sD - -o /dev/null https://<site>/ | grep -i cache-control`
+  to confirm nothing in front of Node is holding the page.
+- **Do not move `app.use(htmlCache)` above `app.use(staticCache(publicPath))`**
+  in `app.js`. It would drop every static asset to `no-cache`. See §12.2.
+- **`public/css/` is empty — the stylesheets live in `public/styles/`.** A
+  request for `/css/style.css` 404s and returns `no-cache, private`, which
+  looks exactly like a caching bug and is not one. See §12.2.
 - **`npm test` is red on `main` and has nothing to do with the editor.**
   `dataCreateInviteeValid.test.js:16` expects `null@null.com` to be rejected;
   `deep-email-validator` performs a live MX/SMTP lookup and now accepts it. The
@@ -1077,3 +1110,416 @@ body copy carries no `data-slot-clearable`.
 behaviour. Worth checking first: that clicking a title really clears it, that
 clicking away restores it, that the hint shows with the dashed box intact, and
 that `↺` enables only once something changes.
+
+## 12. Content went stale on the live site (2026-09-18)
+
+### 12.1 The symptom, and why it was so confusing
+
+The couple edited the Programme on 2026-09-13. The rows were plainly there in
+the production database (`u793064228_wedding_db.site_content` — `Cérémonie de
+Dot`, `Mariage traditionnel`, times, addresses). The live page showed
+`Église / Mairie / Réception` with `Lorem ipsum…` instead.
+
+What made it hard to read: the page was rendering **the template defaults,
+byte for byte**. `PROGRAM_PRESETS` in `constants/content.slots.js` is exactly
+those three titles, and both ceremonies start from the same outline — so the
+Abidjan and Ouagadougou tabs were *identical*, and no time was rendered
+anywhere (the `.time` default is `''`). That combination is the signature of
+"zero overrides applied", not of "wrong override applied". If you ever see it
+again, do not go looking at the rendering code: `getContentValue()` is fine, the
+cache it reads is empty.
+
+**Diagnostic, in order:**
+
+1. `node scripts/content-audit.js --env=config/.prod.env` — does the database
+   actually hold the rows? (It also flags orphaned `slot_key`s, see §12.4.)
+2. `curl -sD - -o /dev/null https://<site>/ | grep -i cache-control` — is the
+   page being cached by something in front of Node?
+3. Restart the app. If the content appears, it was the server-side cache.
+
+### 12.2 Cause 1 — rendered pages had no cache policy at all
+
+`middlewares/staticCache.js` gives every file under `public/` an explicit
+`Cache-Control`. **Rendered pages got none.** A response from `res.render` had
+only the weak ETag that `res.send` adds by default:
+
+```
+HTTP/1.1 200 OK
+Content-Type: text/html; charset=utf-8
+ETag: W/"5b54-+c1WLmWC4dsqd24jC/AmMvPg2FY"
+          <- no Cache-Control
+```
+
+A response with no freshness directive has no defined lifetime, so any cache in
+the path may assign it one of its own invention (RFC 9111 §4.2.2, "heuristic
+freshness"). Browsers usually revalidate, which is why the page eventually
+corrected itself and why this was intermittent — but an intermediary (the
+host's page cache, a CDN, a mobile carrier proxy) is entitled to hold it for
+minutes or hours. A guest who had already opened the site was the worst case,
+which is exactly who a wedding site's audience is.
+
+**Fix: `middlewares/htmlCache.js` (new).**
+
+| Page | `Cache-Control` |
+| --- | --- |
+| `/`, `/give`, API routes | `no-cache, private` |
+| `/admin/*` and any `?edit=1` | `no-store, no-cache, must-revalidate, private` (+ `Pragma`) |
+
+Plus `Vary: Cookie` on both.
+
+`no-cache` does **not** mean "do not store" — it means "store it, but
+revalidate before reuse". Paired with the ETag that was already there, a
+returning visitor sends `If-None-Match` and gets a **304 with an empty body**
+when nothing changed (measured: `status=304 bytes=0`), or the full fresh page
+the instant a slot changes. Correctness at essentially no bandwidth cost. Do
+not "optimise" this to `max-age=<n>`: that reintroduces exactly this bug, and
+the 304 already makes revisits cheap.
+
+Two things about it that are deliberate and easy to undo by accident:
+
+- **It is not a `res.render` wrapper.** Two are already stacked (`lazyLoad`,
+  then `cacheBusting`) and a third that forgot to forward its callback would
+  silently disable the ones above it — see the trap in §7. A plain middleware
+  setting a header needs none of that.
+- **It is mounted *after* `staticCache(publicPath)`** in `app.js`. Files under
+  `public/` are served above it and never reach it, so the long `max-age`s in
+  `staticCache.js` survive. Move this line above `staticCache` and you will
+  quietly drop every asset to `no-cache`. Verified after the change:
+  `/styles/theme.css` → `max-age=604800`, `/img/main-img.jpg` → `max-age=86400`.
+  (Careful when spot-checking: `public/css/` is **empty** — the stylesheets are
+  in `public/styles/`. A request for `/css/style.css` 404s, falls through to
+  `htmlCache`, and comes back `no-cache, private`, which looks exactly like the
+  bug you are checking for. It is not.)
+
+### 12.3 Cause 2 — the content cache only ever loaded at boot
+
+`contentCache` in `controllers/content.controller.js` carried this comment:
+
+> *"It is refreshed at boot and after every write, and there is exactly one
+> server process, so it cannot go stale."*
+
+`initContentCache()` was called in exactly two places: `app.js` at boot, and
+after a save/reset made **through the app**. No TTL, no polling. Both of that
+comment's assumptions break silently:
+
+- a row edited straight in **phpMyAdmin** is invisible until someone restarts
+  the server — and editing rows by hand is the obvious thing to do when the
+  site looks wrong, which makes this self-reinforcing;
+- under **PM2/cluster with more than one worker**, a save refreshes only the
+  worker that handled the request; the others keep serving the old text
+  indefinitely, so the site appears to flip between old and new depending on
+  which worker answers.
+
+**Fix:** `refreshContentCacheIfStale()`, called from `contentLocals` on every
+page render. If the cache is older than `CACHE_TTL_MS` (60s) it starts a reload
+and **returns without awaiting it**.
+
+Fire-and-forget is the design, not a shortcut. `getContentValue()` is called
+from inside the templates and cannot `await`, and renders are deliberately
+DB-free so that an unreachable MySQL costs nothing at render time and never
+blanks the site. The request that finds the cache stale still renders what is in
+memory; the next one gets the fresh values. `refreshInFlight` is a single-flight
+guard — without it, a burst of traffic onto a stale cache fires one `SELECT`
+per request. `cacheLoadedAt` is stamped on failure too, so a database that is
+down is retried once per window rather than on every request.
+
+**Worst-case delay is the full 60s window, and only for edits that did not come
+through the app.** Edits made in the editor are still instant, because the save
+path calls `initContentCache()` directly. That asymmetry is intentional; do not
+"simplify" it away by deleting the refresh on write.
+
+**Verified on a running server, no restart, local DB:** an `INSERT` straight
+into `site_content` bypassing the app appeared on the page in ~24s; the matching
+`DELETE` (the editor's "restore default") reverted it in ~60s. The test left the
+table at 0 rows.
+
+### 12.4 `scripts/content-audit.js` — what has the couple actually changed?
+
+```bash
+node scripts/content-audit.js                        # local dev DB
+node scripts/content-audit.js --env=config/.prod.env # production
+node scripts/content-audit.js --full                 # do not truncate values
+```
+
+Prints, newest first, every slot with a row: label, key, the template default,
+the current value, and `updated_at`. It also warns about **orphaned rows** —
+`slot_key`s in the database that no longer exist in `constants/content.slots.js`.
+That is the one thing a code change can silently destroy: rename or delete a
+key and the couple's saved text is still in the table but is never read again,
+so the page reverts to the default with no error anywhere. Run it before and
+after any refactor of the slot registry.
+
+It is **strictly read-only**: a single `SELECT`, and it deliberately does *not*
+import `content.model.js`, because that would run `CREATE TABLE IF NOT EXISTS`
+on import — harmless, but a tool for inspecting production should not write to
+it. `ER_NO_SUCH_TABLE` is therefore reported as a valid answer ("the editor has
+never saved anything"), not an error.
+
+Note it reads `config/.env` by default, so on a dev machine it reports **0 of
+113 slots overridden** — the local database is empty and has always been. That
+is not a bug and not evidence of data loss; pass `--env=config/.prod.env` to
+see the couple's real edits.
+
+### 12.5 What the couple's content does *not* depend on
+
+Worth knowing before worrying about losing their work:
+
+- **It is not in git.** The editor writes to MySQL; `git log`/`git diff` will
+  never show a content change no matter how much they have edited. Code changes
+  cannot clobber it.
+- **A row exists only for a slot they actually changed**; an absent row means
+  "still the template default", which is how "rétablir" is implemented
+  (`deleteContent`). Nothing in the codebase drops or truncates the table.
+- **Uploaded photos were already safe.** `uploadImage.js` names every upload
+  `<timestamp>-<random>.<ext>`, so swapping a photo produces a new URL and the
+  1-day image `max-age` in `staticCache.js` cannot serve the old one.
+- **There is no service worker** — checked. One would be a third cache layer on
+  top of these two; do not add one without revisiting this section.
+
+The real backup is therefore the database, not the repo:
+
+```bash
+mysqldump <db> site_content > site_content-<date>.sql
+tar czf uploads-<date>.tar.gz public/uploads/
+```
+
+### 12.6 What is NOT verified
+
+- **Nothing here was checked against production.** Reading
+  `config/.prod.env` was blocked in that session's sandbox, so every
+  measurement above is from a local server against the local database. The
+  header change is environment-independent, but **whether an intermediary in
+  front of the production Node process now honours `no-cache` is unconfirmed.**
+  After deploying, run
+  `curl -sD - -o /dev/null https://<site>/ | grep -i cache-control` and check
+  the header actually arrives at the browser rather than being rewritten by the
+  host's proxy. If the host injects its own caching, this fix is not sufficient
+  on its own and the host's page cache has to be disabled for the Node app.
+- **No page was opened in a real browser**, consistent with the rest of this
+  document.
+- `npm test` is still red on the one pre-existing, network-dependent assertion
+  described in §7 — confirmed identical on a clean `d7b6702`, so it is not
+  related to these changes.
+
+## 13. One programme, with a place and a map link per entry (2026-09-22)
+
+### 13.1 What changed and why
+
+The programme was two timelines — Abidjan and Ouagadougou — behind a tab bar.
+It is now **one timeline**, and every entry carries two new optional fields:
+
+- `…place` — where that step happens (text, max 70, optional)
+- `…map` — a Google Maps link for that place (url, optional)
+
+The two changes are one idea. Once an entry says where it is, splitting the
+programme by city stops earning its keep: the guest no longer has to pick a
+city before they can find out where anything is.
+
+It also matches what the couple were already doing. They had been typing
+addresses into the entry's **description** for want of anywhere better —
+`home.program.locA.item1.text` was "Résidence des GBALA-GNATO, Cité Génie 2000,
+Cocody", and `locB.item2.text` was "Mairie centrale de Ouaga 2000". The place
+field is the home those values wanted.
+
+### 13.2 The key prefix is still `locA`, and that is deliberate
+
+`PROGRAM_LOCATIONS` now holds one entry, and its `id` is **still `locA`** even
+though there is no longer an A and a B. It looks like a leftover. It is not:
+every one of the couple's saved entries is stored under `home.program.locA.*`,
+and renaming the prefix would orphan all of them — the rows would still be in
+the table and never read again, and the page would fall back to the template
+defaults with no error anywhere (this is exactly the failure mode of §12.1).
+**Do not "tidy" this into `home.program.item1.*` without writing a migration.**
+
+`PROGRAM_LOCATIONS` is also still an *array*, and the tab bar is rendered only
+when `programLocations.length > 1`. Going back to per-city timelines is
+therefore a matter of pushing a second object into that array — the panel
+markup, the CSS and `program-tabs.js` all still work. `role="tabpanel"` is
+likewise conditional, because a lone tabpanel with no tab controlling it is a
+screen-reader dead end.
+
+### 13.3 Why the place renders three different ways
+
+`views/index.ejs` has three branches for one line of text, which looks
+excessive until you try to merge them:
+
+| Who | Rendering |
+| --- | --- |
+| Visitor, link set | `<a class="program-place program-place-link" target="_blank" rel="noopener noreferrer">` |
+| Visitor, no link | `<span class="program-place">` |
+| Admin in edit mode | `<span class="program-place">` + the 🔗 button |
+
+The admin never gets the `<a>`. A `contenteditable` inside an anchor is a trap:
+the first click navigates instead of placing the caret. (`edit-mode.js` already
+carries a global click handler that calls `preventDefault()` on any `<a>`
+containing a `.ls-slot`, which is the same problem solved elsewhere — but not
+rendering the anchor at all is better than fighting it.)
+
+The pin icon is `views/program-pin.ejs`, a partial precisely because it is
+rendered in all three branches and they must not drift apart.
+
+### 13.4 The map URL is validated harder than anything else
+
+This value ends up in an `href`, which makes it the only place in this codebase
+where admin input becomes something the browser will **act** on rather than
+display. `validateMapUrl()` in `controllers/content.controller.js`:
+
+- **`https:` only.** This is the part that matters. Escaping alone would not
+  stop `javascript:…`, which executes on click with the page's own origin.
+- **A host allowlist** — `maps.app.goo.gl`, `goo.gl`, and `google.<tld>` with
+  an optional `www.`/`maps.` prefix. Same reasoning as `IMAGE_PATH_PATTERN`: a
+  slot must not become a link to a third-party site. Country domains are
+  covered because `google.ci` and `google.bf` are the ones that matter here.
+
+It parses with `new URL()` rather than matching one big regex, because a regex
+over a whole URL has to get userinfo, ports and backslashes right to be safe,
+and `https://google.com@evil.example/` is exactly what it gets wrong. **Both
+halves are required**: validation on write stops `javascript:` getting in,
+`slotUrl()` escaping on render stops a quote breaking out of the attribute.
+Never render a `url` slot with `<%= %>` straight from the cache.
+
+Verified against 16 cases including `javascript:`, `JaVaScRiPt:`, `data:`,
+plain `http:`, `//maps.google.com/`, `https://google.com.evil.example/` and
+`https://google.com@evil.example/` — all refused; six legitimate Google Maps
+forms accepted.
+
+`public/js/edit-mode.js` carries a **deliberate duplicate** of these rules
+(`isMapUrl`) so a typo is caught while the admin is looking at the field rather
+than failing the whole save. The server remains the authority. **If you change
+the rules in one place, change them in the other.**
+
+### 13.5 The migration — NOT YET RUN ON PRODUCTION
+
+`scripts/merge-program.js` appends the old Ouagadougou entries to the end of the
+single timeline and deletes the dead `locB` rows.
+
+```bash
+node scripts/merge-program.js                          # dry run, changes nothing
+node scripts/merge-program.js --env=config/.prod.env   # dry run against prod
+node scripts/merge-program.js --env=config/.prod.env --apply
+```
+
+**Until this is run on production, the couple's Ouagadougou entries are in the
+database but not rendered.** They are not lost — `locB` rows are untouched by
+the code change — but the page shows only the three Abidjan entries.
+
+Two things it does that are easy to miss:
+
+- It migrates the value **the page was actually showing**, not just the saved
+  row. `locB.item2.title` and `locB.item3.title` had no rows at all, so they
+  were rendering the old presets "Mairie" and "Réception". Migrating only
+  stored rows would have moved those entries across with empty titles — and
+  the title is not optional, so they would have been unsaveable. `LEGACY_PRESETS`
+  in that script is a verbatim copy of the pre-change `PROGRAM_PRESETS` for
+  this reason; it is a one-time fossil and should not be kept in sync.
+- It writes in **one transaction** and is **safe to run twice** — once the
+  `locB` rows are gone it reports "nothing to migrate" rather than appending a
+  second copy.
+
+Rehearsed locally against a seeded copy of the production rows (taken from the
+phpMyAdmin screenshot): 3 + 3 entries merged to 6, count updated, 6 `locB` rows
+deleted, re-run was a no-op, and `content-audit.js` reported no orphans after.
+
+### 13.6 `package.json` version was bumped to 1.14.1
+
+`cacheBusting.js` appends `?v=<package version>` to every `.css` and `.js` URL,
+and `staticCache.js` serves those with `max-age=604800` — **seven days**. This
+change touched `edit-mode.js`, `home.css`, `theme.css` and `edit-mode.css`, so
+without the bump a returning visitor would have had the new markup and the old
+stylesheet for a week. **Bump the version in `package.json` whenever you change
+a file under `public/`.** (Note this is a different mechanism from §12 — that
+one is about the HTML, this one about the assets it references.)
+
+### 13.7 The link control is a labelled pill, not an icon (revised 2026-09-22)
+
+The first version was a 22px circular icon button. That was wrong twice over:
+too small to notice sitting next to body copy, and unable to say which of its
+two states it was in without the admin hovering it for a tooltip — on a control
+whose entire job is to report a value that is invisible everywhere else.
+
+It is now a labelled pill that states its condition three ways, because any one
+of them alone fails somebody:
+
+| | No link | Link set |
+| --- | --- | --- |
+| Words | "Ajouter le lien Maps" | "Lien Maps ajouté" |
+| Tick | hidden | shown |
+| Fill | dashed blue outline | solid green |
+
+Dashed-versus-solid is not decoration: dashed means "empty slot" everywhere
+else in this editor, so it had to stop reading that way once a link exists.
+Green rather than blue because the filled state reports a result rather than
+offering an action.
+
+The dialog also gained live feedback (`refreshLinkFeedback`): a valid paste
+shows a green confirmation plus an **"Ouvrir pour vérifier"** anchor that opens
+the link in a new tab. A Maps share link is opaque — `maps.app.goo.gl/X7f2…`
+tells nobody where it points — so "it parses" is not "it is correct", and the
+only real check is opening it. The anchor calls `stopPropagation()`, or the
+global anchor handler in `edit-mode.js` would swallow the click.
+
+The invalid-link message stays quiet until more than 12 characters have been
+typed, so it does not flash on every keystroke of a URL being entered.
+
+### 13.8 Traps in this area
+
+- **Anything that moves an entry must handle all five fields.** `programSlots()`
+  in `edit-mode.js` returns `title`, `time`, `text`, `place` **and** the map
+  button; `copyProgramEntry`, `resetProgramEntry`, `revertProgramEntry` and
+  `updateRevertState` each touch all of them. Removing an entry shifts every
+  later one up a row — miss a field there and a place stays behind on the wrong
+  entry, which looks like data corruption and is very hard to trace.
+- **The map button is not a `.ls-slot`**, so `initTextSlots()` does not record
+  its baseline. `initLinkEditor()` seeds it by hand, the same way
+  `initProgramControls()` seeds the count. Without that, clearing a link would
+  not register as a change.
+- **`.program-place-line` is a flex container**, so the `.text-end` class that
+  right-aligns every other element in this section does nothing to it —
+  `justify-content: flex-end` is what moves the right-hand entries' place line.
+- `PROGRAM_PLACEHOLDERS` was removed from `edit-mode.js`; it had been dead since
+  the fields started rendering genuinely empty (§11.1).
+
+### 13.9 Content-preservation proof (rehearsed 2026-09-22)
+
+The whole change was rehearsed against a verbatim copy of the 15 production
+rows, checking after every step that each stored value was still both in the
+database and on the page:
+
+| Step | Result |
+| --- | --- |
+| New code deployed, migration **not** run | All 15 rows still in the table; the 6 `locB` rows untouched; every Abidjan value still rendering |
+| `merge-program.js --apply` | All 15 values still stored; count 3 → 6; `locB` rows removed only after their values were written to `locA` |
+| Page after restart | **All 15 production values present**, across 6 timeline entries |
+| An admin saves the two new fields | Every pre-existing row **byte-identical**; exactly 2 rows added, 0 changed, 0 deleted |
+
+Two things that proof establishes, both worth keeping in mind:
+
+- **The code change alone cannot lose anything.** Removing `locB` from the
+  registry makes those rows unreadable, not deleted — and `saveContentUpdates`
+  rejects them as unknown keys rather than touching them. The migration is the
+  only thing that moves them, and it writes the new rows before deleting the
+  old ones, in one transaction.
+- **A save writes only what changed.** The editor posts its `pending` map, so
+  slots the admin never touched are never written — which is why adding two
+  fields to every entry adds no rows until they are filled in.
+
+The first run of this rehearsal reported the Ouagadougou values missing from
+the page at step 3, which looked like data loss and was not: the migration
+writes straight to the database, so the running server served its 60-second
+cache (§12.3) until it was restarted. That is why `merge-program.js` ends by
+telling you to restart — **do not read a post-migration page without doing so
+and conclude the migration failed.**
+
+### 13.10 What is NOT verified
+
+- **No browser.** Same gap as every other session: the page was driven over
+  HTTP, and 17 editor assertions pass (login → editor session → markup → save
+  → the rejection paths), but **nobody has clicked the 🔗 button**. Worth
+  checking first: that the dialog opens anchored sensibly, that Enter commits
+  and Escape closes, that the pill turns solid green once a link is set, that
+  "Ouvrir pour vérifier" opens the right place, and that the place line and the
+  pill look right on a phone and in dark mode.
+- **Production is untouched** — see §13.5.
+- The local development database now holds a **copy of the production rows**
+  plus a test place and map link on entry 1, left there by the rehearsal in
+  §13.9. It is test data, not a source of truth; production is untouched.

@@ -878,3 +878,77 @@ p {
         font-size: 1.05rem;
     }
 }
+
+/* ------------------------------------------------- programme: place + map
+
+   The small line under a timeline entry saying where that step happens. It is
+   deliberately quieter than the title and the time: it is reference
+   information a guest looks for once, not something to compete with the
+   entry's name.
+
+   Three renderings share .program-place — an <a> when the couple added a map
+   link, a <span> when they did not, and a <span> plus the editor's link button
+   in edit mode. Keeping the typography on the shared class is what stops the
+   line moving when a link is added. */
+
+.program-place-line {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    flex-wrap: wrap;
+
+    margin-top: 0.1rem;
+    margin-bottom: 0;
+}
+
+/* .text-end sets text-align, which does nothing to a flex container — the
+   right-hand entries need their items moved instead. */
+.program-place-line.text-end {
+    justify-content: flex-end;
+}
+
+.program-place {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.33rem;
+
+    font-family: "EB Garamond", serif;
+    font-size: 0.78rem;
+    letter-spacing: 0.05em;
+    color: #6f6a68;
+}
+
+.program-pin {
+    flex: 0 0 auto;
+    /* Nudged down to sit on the text's baseline rather than its cap height. */
+    transform: translateY(1px);
+    color: #7B1B38;
+    opacity: 0.8;
+}
+
+/* Only the linked variant is coloured and underlined, so a place with no map
+   link does not look like a dead link. */
+a.program-place-link {
+    color: #7B1B38;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(123, 27, 56, 0.35);
+    transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+a.program-place-link:hover,
+a.program-place-link:focus-visible {
+    color: #5c1429;
+    border-bottom-color: currentColor;
+}
+
+a.program-place-link:focus-visible {
+    outline: 2px solid rgba(123, 27, 56, 0.45);
+    outline-offset: 3px;
+    border-radius: 2px;
+}
+
+@media (max-width: 576px) {
+    .program-place {
+        font-size: 0.72rem;
+    }
+}

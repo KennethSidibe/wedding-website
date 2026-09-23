@@ -282,3 +282,24 @@ html[data-theme="dark"] .program-tab::after {
 html[data-theme="dark"] .program-time {
     color: var(--ls-accent);
 }
+
+/* Programme place line. The light-theme maroon fails contrast on the dark
+   background, so both the pin and the link move to the theme's accent. */
+html[data-theme="dark"] .program-place {
+    color: var(--ls-muted);
+}
+
+html[data-theme="dark"] .program-pin {
+    color: var(--ls-accent);
+}
+
+html[data-theme="dark"] a.program-place-link {
+    color: var(--ls-accent);
+    border-bottom-color: rgba(211, 138, 160, 0.4);
+}
+
+html[data-theme="dark"] a.program-place-link:hover,
+html[data-theme="dark"] a.program-place-link:focus-visible {
+    color: #f0c3d0;
+    border-bottom-color: currentColor;
+}
