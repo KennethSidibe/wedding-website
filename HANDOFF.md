@@ -2,8 +2,8 @@
 
 **Last updated: 2026-09-22**
 
-> Scope note: the 2026-09-22 session also cut the **home page from ~2590 KB to
-> 423 KB** and added on-upload image optimisation (§15), and ran a **security
+> Scope note: the 2026-09-22 session also cut the **home page from 4065 KB to
+> 683 KB** and added on-upload image optimisation (§15), and ran a **security
 > review** (§14):
 > `npm audit` went from 16 vulnerabilities to 0 (including a deliberate
 > nodemailer 8 → 10 major bump), and baseline security headers were added. It
@@ -1663,8 +1663,18 @@ megapixels — 1023 KB**, and `couple-3.png` was a *photograph stored as PNG* at
 A guest on mobile data was downloading roughly twenty times more image than
 their screen could use.
 
-**The home page went from ~2590 KB to 423 KB — 84% less.** `public/img` went
+**The home page went from 4065 KB to 683 KB — 83% less.** `public/img` went
 from 21 MB to 4.1 MB.
+
+> Those figures were corrected on 2026-09-23 (they were first reported as
+> "2590 KB to 423 KB"). The script that measured them used a case-sensitive
+> regex, so it silently skipped every `.JPG` file — under-counting both sides.
+> The percentage barely moved; the absolute numbers were wrong. **When
+> measuring page weight, count what the browser actually requests**: assets
+> referenced from the HTML (including inline `style` `url()`), plus
+> `@font-face` files whose family is applied somewhere — and *not*
+> background-images whose selector matches no element on the page, which the
+> browser never fetches.
 
 ### 15.2 `scripts/optimize-images.js`
 
@@ -1768,7 +1778,19 @@ implementation at all.
   photo produces a new URL. Repo images keep the shorter 1-day life because
   their filenames are stable and a redeploy has to be able to take effect.
 
-### 15.7 What is NOT done
+### 15.7 Dead weight still in the repo
+
+`home.css` declares six background-image rules — `.photographer`,
+`.videographe`, `.piece`, `.champagne`, `.buffet`, `.planner` — whose class
+names appear in **no template at all**. The browser never requests them, so
+they cost a visitor nothing, but the six image files (~530 KB, `piece.jpg`
+alone is 278 KB) are carried in the repo and in every deploy for nothing.
+
+Left in place deliberately: they look like a services section that was planned
+or removed, and deleting someone's assets on a guess is worse than 530 KB of
+repo. Delete both the rules and the files if that section is not coming back.
+
+### 15.8 What is NOT done
 
 - **No responsive `srcset`/multiple widths.** Every viewport gets the 2000px
   version. The next real win, and it needs the templates to emit `<picture>`.
@@ -1781,3 +1803,153 @@ implementation at all.
 - `sharp` is a **native dependency**. It ships prebuilt binaries per platform;
   if the production host's Node or libc differs, `npm install` there must be
   able to fetch or build them. Watch the first deploy.
+
+## 16. Verification pass (2026-09-23)
+
+A sweep for anything still broken. Three real findings, all pre-existing rather
+than introduced by the recent work.
+
+### 16.1 Two unauthenticated routes that leaked guest data to the log — removed
+
+`GET /select` and `GET /selectAll` were leftover debug routes. Neither was
+linked from anywhere. **Neither required authentication.** Both read guest
+records — `/selectAll` read the *entire* guest list — logged them with
+`console.log`, and redirected to `/`.
+
+They did not return data to the caller, so this was not a direct disclosure.
+But any anonymous request to `/selectAll` pushed every guest's name and email
+into the server log, where they are retained by the host and visible to anyone
+with log access. Both routes are gone; guest data is now reachable only through
+`/admin`. A `POST /` stub that replied `Post route / HIT` was removed with them
+(nothing posts to `/`; the registration form posts to `/invitee`).
+
+### 16.2 Guest personal data was being logged on every registration — removed
+
+Independently of those routes, the normal registration path logged:
+
+- the full `createInvitee` result and field metadata (`invitees.model.js`),
+- the inserted id and the update parameters, including first and last name,
+- the `deep-email-validator` result object, which contains the address, and
+  the full mail-send response (`mail.controller.js`).
+
+All removed. Error logging is kept (`console.log(error)` became
+`console.error`). A commented-out test call containing a personal email address
+was deleted too.
+
+**Rule for anything added later: guest names and addresses do not go to
+stdout.** The host keeps those logs.
+
+### 16.3 `program-tabs.js` was still being shipped
+
+With one timeline the script finds no tabs and returns immediately, so every
+visitor downloaded it for nothing. Its `<script>` tag is now behind the same
+`programLocations.length > 1` condition as the tab bar, so restoring a second
+location restores the script with it. Nothing calls
+`window.lsSelectProgramLocation` — checked — so not defining it breaks nothing.
+
+### 16.4 Two test failures that were the tests' fault, not the code's
+
+Worth recording, because both looked alarming:
+
+- **"editor chrome missing on `/?edit=1`"** — the crawl fetched `/admin` before
+  `/?edit=1`, and visiting the dashboard **deliberately closes the editor
+  session** (`app.js`: an admin who walked out of the editor with the back
+  button must re-enter through the button). Working as designed.
+- **"pre-existing rows not byte-identical"** — the assertion compared *every*
+  row including the one the test had just written. Excluding that key, nothing
+  else moves.
+
+Together with §15.5, that is three assertions in two days that were wrong
+rather than the code. **An assertion that passes is not evidence until you have
+seen it fail**, and one that fails deserves the same scepticism.
+
+### 16.5 Verified green
+
+Routes (including 404s for the removed ones), every referenced asset resolves
+across all seven pages, visitor/editor isolation on each, the couple's content
+renders across 6 entries, mirrored place/link ordering 6/6 both sides, security
+headers, `javascript:`/off-host/XSS/CSRF all refused, uploads optimised and
+fakes rejected, and no row disturbed by a save. `npm audit`: 0.
+
+`npm test` is still red on the single pre-existing network-dependent assertion
+described in §7.
+
+### 16.6 TWO FINDINGS LEFT UNFIXED — they need the owner's decision
+
+Both are live on `main`. Neither was touched, because fixing either changes
+guest-facing behaviour or guest data, and guessing wrong is worse than leaving
+them documented.
+
+#### A. The app reads and writes the TEST invitee table
+
+`models/invitees.model.js:5`
+
+```js
+const TABLE_NAME = TEST_TABLE_NAME;   // 'test_invitees'
+```
+
+Commit `9ed3a12 "Set database to test table"` flipped this from
+`PROD_TABLE_NAME` and it was never flipped back. **Every guest registration in
+production is being written to `test_invitees`, and `/admin` reads the same
+table.**
+
+It is self-consistent — registrations go in and the admin list shows them — so
+nothing looks broken from the outside. But the real `invitees` table is
+orphaned. On the development database: `invitees` holds 87 rows (highest id
+174), `test_invitees` holds 59 (highest id 62).
+
+**Do not simply flip it.** If production has been collecting real registrations
+in `test_invitees` since that commit, switching to `PROD_TABLE_NAME` makes the
+couple's actual guest list vanish from `/admin`. Decide with the data in front
+of you:
+
+```sql
+SELECT 'invitees' t, COUNT(*) n, MAX(id) FROM invitees
+UNION ALL
+SELECT 'test_invitees', COUNT(*), MAX(id) FROM test_invitees;
+```
+
+If the real registrations are in `test_invitees`, the fix is to migrate them
+into `invitees` and *then* flip the constant — not to flip it alone.
+
+#### B. Registration validation never runs
+
+`controllers/invitees.controller.js`
+
+```js
+if(dataCreateInviteeValid(formBody)) {     // <- missing await
+```
+
+`dataCreateInviteeValid` is `async`, so it returns a Promise, and a Promise is
+always truthy. **The guard can never fail.** Verified: a POST to `/invitee`
+with an empty last name and empty email returns `303 /?registered=1`.
+
+Adding `await` is a one-word fix, and it is deliberately not applied here,
+because that function ends with:
+
+```js
+const emailValid = await validate(data.email);   // deep-email-validator
+```
+
+which performs a live MX/SMTP lookup. Turning validation on therefore puts a
+network round-trip in front of every registration and can **reject real guests
+when the lookup misbehaves** — and we know it misbehaves: that is the
+pre-existing red test in §7, where `null@null.com` is now accepted. Enabling
+this a few weeks before a wedding, untested against live DNS, is the riskier
+option.
+
+Two further problems inside that function, which matter if it is ever enabled:
+
+```js
+if(!typeof data.firstName === 'string' || ...)    // always false
+if(!data.firstName.length > 0 || ...)             // always false
+```
+
+`!typeof x` is a boolean, never `'string'`; `!x.length > 0` is `false > 0`.
+**Both guards are no-ops.** Only the null / empty-object / `hasOwnProperty`
+checks and the email lookup actually do anything.
+
+**Recommended order:** fix the two broken comparisons, add `await`, and make
+the `deep-email-validator` call non-fatal (accept the registration if the
+lookup errors or times out, rather than rejecting a real guest). Then the
+server has real validation without a DNS outage costing the couple an RSVP.

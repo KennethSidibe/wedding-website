@@ -15,7 +15,7 @@ async function getInvitees() {
         }
         throw new Error('Cannot get Invitees, Data is empty or wrong');
     } catch(error) {
-        console.log(error);
+        console.error(error);
         return null
     }
     
@@ -32,10 +32,6 @@ function isObjEmpty (obj) {
 }
 
 async function getInvitee(id) {
-    
-    console.log(`ID : ${id}`);
-    
-
     try {
         const query = `SELECT * FROM ${TABLE_NAME} where id = ?`;
         const [data, fields] = await pool.execute(query, [id]);
@@ -57,17 +53,10 @@ async function createInvitee(fName, lName, email) {
 
         const [result, fields] = await pool.execute(query, [fName, lName, email]);
 
-        
-        console.log(`createInvitee result:`);
-        console.log(result);
-        console.log(`Fields:`);
-        console.log(fields);
 
         if(!isObjEmpty(result)) {
             const newId = result.insertId;
 
-            console.log(`new Id inserted : ${newId}`);
-            
             return newId;
         }
         throw new Error('Cannot create Invitee, Data is empty or wrong');
@@ -83,7 +72,6 @@ async function deleteInvitee(id) {
         
         const [result, fields] = await pool.execute(query, [id]);
         if(!isObjEmpty(result)) {
-            console.log(result);
             if(result.affectedRows > 0) {
                 return result;
             }
@@ -105,9 +93,6 @@ async function updateInviteeName(id, fName, lName) {
         WHERE id = ?`;
         if(isNaN(id)) throw new Error('Id is not a number or incorrect val');
 
-        console.log(`id : ${id}, fName: ${fName}, ${lName}`);
-        console.log(`type of, fName ${typeof fName}, lName ${typeof lName}`);
-        
         // check if fName & lName are string
         if(!typeof fName === "string" && !typeof lastName === "string") {
             throw new Error('fName or lName is not a string');

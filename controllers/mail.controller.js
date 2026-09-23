@@ -10,17 +10,12 @@ import fs from "fs";
 const imgDirPath = path.resolve('./public/img/');
 const imgDirPathFromModule = path.resolve('../public/img');
 
-console.log(imgDirPath);
-console.log(`From module: ${imgDirPath}`);
 
 const imgBuffer = fs.readFileSync(`${imgDirPath}/webp/couple-3.webp`);
 const imgBase64 = imgBuffer.toString("base64");
 
 async function sendEmail(recipient) {
     let emailValid = await validate(recipient);
-    console.log('email Valid: ');
-
-    console.log(emailValid);
 
     try {
         if (emailValid.valid === true) {
@@ -37,8 +32,6 @@ async function sendEmail(recipient) {
                 html: emailBody
             });
 
-            console.log(`Email send response`);
-            console.log(resp);
 
             return resp;
         }
@@ -49,8 +42,6 @@ async function sendEmail(recipient) {
     }
 }
 
-// console.log('email resp: ');
-// console.log(await sendEmail('sidibestevekenus@gmail.com'));
 
 export {
     sendEmail

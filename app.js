@@ -76,47 +76,16 @@ app.get('/', (req, res) => {
   res.render('index.ejs', { registered: req.query.registered === '1' });
 });
 
-app.get('/select', async(req, res) => {
-
-  try {
-    const invitee = await retrieveInvitee({id:15});
-    if(invitee != null) {
-      console.log(invitee);
-      res.redirect('/');
-    }
-    else {
-      res.redirect('/?error=nF');
-    }
-  } catch (error) {
-    console.error(error);
-    res.redirect('/?error=nF');
-  }
-
-});
-
-app.get('/selectAll', async(req, res) => {
-
-  try {
-    const invitees = await retrieveAllInvitees();
-    if(invitees != null) {
-      console.log(invitees);
-      res.redirect('/');
-    } else {
-      res.redirect('/?error=nF');
-    }
-  } catch (error) {
-    console.error(error);
-    res.redirect('/')
-  }
-});
+// Removed 2026-09-23: two leftover debug routes, GET /select and
+// GET /selectAll. Neither was linked from anywhere, both were
+// **unauthenticated**, and both read guest records — /selectAll read the
+// entire guest list — only to dump them to the server log and redirect. Any
+// anonymous request could therefore push every guest's name and email into
+// the logs. Guest data is only reachable through /admin now.
 
 // Register Invitees
 app.get('/invitees', async(req, res) => {
   res.render('invites.ejs');
-});
-
-app.post('/', async(req, res) => {
-  res.send('Post route / HIT');
 });
 
 app.post('/invitee', async(req, res) => {
