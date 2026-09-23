@@ -2,7 +2,12 @@
 
 **Last updated: 2026-09-22**
 
-> Scope note: the 2026-09-22 session replaced the two-city programme with **one
+> Scope note: the 2026-09-22 session also cut the **home page from ~2590 KB to
+> 423 KB** and added on-upload image optimisation (§15), and ran a **security
+> review** (§14):
+> `npm audit` went from 16 vulnerabilities to 0 (including a deliberate
+> nodemailer 8 → 10 major bump), and baseline security headers were added. It
+> replaced the two-city programme with **one
 > timeline whose entries each carry a place and a Google Maps link** (§13), and
 > migrated the couple's Ouagadougou entries onto it. **The migration has not
 > been run against production yet — see §13.5; until it is, their Ouagadougou
@@ -1338,7 +1343,35 @@ markup, the CSS and `program-tabs.js` all still work. `role="tabpanel"` is
 likewise conditional, because a lone tabpanel with no tab controlling it is a
 screen-reader dead end.
 
-### 13.3 Why the place renders three different ways
+### 13.3 Where the place sits, and in which order
+
+The place line lives in the **title/time block, under the time** — not under
+the description, where it started. The title, the time and the place are the
+three facts a guest scans a timeline for; the description is the prose that
+follows them, so the place belongs above it.
+
+In edit mode the line holds two things, and their order is **mirrored** by
+side:
+
+| Side | Order |
+| --- | --- |
+| Left entries | place, then the map-link pill |
+| Right entries | the map-link pill, then place |
+
+Left entries read outward from the timeline spine, so the right-hand ones have
+to be reversed or the pill ends up furthest from the spine and the eye meets
+the control before the thing it controls.
+
+This is done **in the markup, not with `flex-direction: row-reverse`**, so the
+DOM order matches the reading order for a screen reader. That is why the pill
+is a partial (`views/program-map-btn.ejs`): it is rendered from two places and
+two copies would drift apart.
+
+Two icons, deliberately different: the place carries a **pin**
+(`views/program-pin.ejs`), the pill carries a **folded map**. They sit side by
+side, so the same glyph twice would read as one repeated thing.
+
+### 13.4 Why the place renders three different ways
 
 `views/index.ejs` has three branches for one line of text, which looks
 excessive until you try to merge them:
@@ -1358,7 +1391,7 @@ rendering the anchor at all is better than fighting it.)
 The pin icon is `views/program-pin.ejs`, a partial precisely because it is
 rendered in all three branches and they must not drift apart.
 
-### 13.4 The map URL is validated harder than anything else
+### 13.5 The map URL is validated harder than anything else
 
 This value ends up in an `href`, which makes it the only place in this codebase
 where admin input becomes something the browser will **act** on rather than
@@ -1388,7 +1421,7 @@ forms accepted.
 than failing the whole save. The server remains the authority. **If you change
 the rules in one place, change them in the other.**
 
-### 13.5 The migration — NOT YET RUN ON PRODUCTION
+### 13.6 The migration — NOT YET RUN ON PRODUCTION
 
 `scripts/merge-program.js` appends the old Ouagadougou entries to the end of the
 single timeline and deletes the dead `locB` rows.
@@ -1420,7 +1453,7 @@ Rehearsed locally against a seeded copy of the production rows (taken from the
 phpMyAdmin screenshot): 3 + 3 entries merged to 6, count updated, 6 `locB` rows
 deleted, re-run was a no-op, and `content-audit.js` reported no orphans after.
 
-### 13.6 `package.json` version was bumped to 1.14.1
+### 13.7 `package.json` version was bumped to 1.14.3
 
 `cacheBusting.js` appends `?v=<package version>` to every `.css` and `.js` URL,
 and `staticCache.js` serves those with `max-age=604800` — **seven days**. This
@@ -1430,7 +1463,7 @@ stylesheet for a week. **Bump the version in `package.json` whenever you change
 a file under `public/`.** (Note this is a different mechanism from §12 — that
 one is about the HTML, this one about the assets it references.)
 
-### 13.7 The link control is a labelled pill, not an icon (revised 2026-09-22)
+### 13.8 The link control is a labelled pill, not an icon (revised 2026-09-22)
 
 The first version was a 22px circular icon button. That was wrong twice over:
 too small to notice sitting next to body copy, and unable to say which of its
@@ -1461,7 +1494,18 @@ global anchor handler in `edit-mode.js` would swallow the click.
 The invalid-link message stays quiet until more than 12 characters have been
 typed, so it does not flash on every keystroke of a URL being entered.
 
-### 13.8 Traps in this area
+### 13.9 Traps in this area
+
+- **Never put `margin-left: auto` on the map pill to right-align it.** This was
+  a real bug, fixed the same day: `.program-place-line` is a flex container
+  already set to `justify-content: flex-end` for right-hand entries, and an
+  auto margin on the last item absorbs *all* the free space instead of
+  aligning it — which pinned the place text to the far left of the row and the
+  pill to the far right, splitting the pair. `justify-content` alone keeps them
+  together, and `flex-wrap` still drops the pill onto its own right-aligned
+  line when it does not fit. **The visitor view hides this class of bug**: it
+  renders no pill, so there is no last item to carry the margin and the line
+  looks perfect. Right-hand entries have to be checked in edit mode.
 
 - **Anything that moves an entry must handle all five fields.** `programSlots()`
   in `edit-mode.js` returns `title`, `time`, `text`, `place` **and** the map
@@ -1479,7 +1523,7 @@ typed, so it does not flash on every keystroke of a URL being entered.
 - `PROGRAM_PLACEHOLDERS` was removed from `edit-mode.js`; it had been dead since
   the fields started rendering genuinely empty (§11.1).
 
-### 13.9 Content-preservation proof (rehearsed 2026-09-22)
+### 13.10 Content-preservation proof (rehearsed 2026-09-22)
 
 The whole change was rehearsed against a verbatim copy of the 15 production
 rows, checking after every step that each stored value was still both in the
@@ -1510,7 +1554,7 @@ cache (§12.3) until it was restarted. That is why `merge-program.js` ends by
 telling you to restart — **do not read a post-migration page without doing so
 and conclude the migration failed.**
 
-### 13.10 What is NOT verified
+### 13.11 What is NOT verified
 
 - **No browser.** Same gap as every other session: the page was driven over
   HTTP, and 17 editor assertions pass (login → editor session → markup → save
@@ -1523,3 +1567,217 @@ and conclude the migration failed.**
 - The local development database now holds a **copy of the production rows**
   plus a test place and map link on entry 1, left there by the rehearsal in
   §13.9. It is test data, not a source of truth; production is untouched.
+
+## 14. Security review (2026-09-22)
+
+### 14.1 Dependencies: 16 vulnerabilities → 0
+
+`npm audit` reported **16 (11 high, 3 moderate, 2 low)**. All are now fixed and
+`npm audit` reports **0**.
+
+- **15 fixed by `npm audit fix`** — transitive, no API change. The notable ones
+  were `path-to-regexp` (ReDoS, reachable through Express routing),
+  `picomatch`/`brace-expansion` (ReDoS), `qs` (DoS in body parsing) and
+  `form-data`/`axios` (pulled in by `deep-email-validator`, which runs on every
+  guest registration).
+- **`nodemailer` 8 → 10**, the only breaking bump, done deliberately. Five
+  advisories, the worst being *"Message-level raw option bypasses
+  disableFileAccess/disableUrlAccess, enabling arbitrary file read and full
+  SSRF in the delivered message"*. This project's usage is a plain
+  `createTransport` + `sendMail` with from/to/subject/html/attachments — an API
+  that did not change across those majors. Verified the transport still builds
+  and exposes `sendMail`/`verify`.
+
+Only `nodemailer` moved in `package.json`; everything else was resolved in
+`package-lock.json`. **The mail path was not sent a real email** — that needs
+live SMTP credentials. Watch the first registration after deploying.
+
+### 14.2 Headers: `middlewares/securityHeaders.js` (new)
+
+The site sent **no security headers at all**, and advertised `X-Powered-By:
+Express`. Now set on every response:
+
+| Header | Why it matters *here* |
+| --- | --- |
+| `X-Content-Type-Options: nosniff` | The admin uploads images, they are served from our own origin under `/uploads`, and the upload filter trusts the browser-supplied MIME type. Without this, a file passing as `image/jpeg` that contains markup can be re-interpreted as HTML and run as script on our origin. |
+| `X-Frame-Options: SAMEORIGIN` | The editor is a logged-in surface with destructive one-click actions ("Rétablir le contenu d'origine") — exactly what clickjacking is for. |
+| `Referrer-Policy: strict-origin-when-cross-origin` | Guests now click out to Google Maps; `?edit=1` and `?registered=1` should not travel to a third party. |
+| `x-powered-by` **disabled** | Stops advertising the stack to fingerprinters. |
+
+It is mounted **before `express.static`** — unlike `htmlCache` — because
+`nosniff` has to reach uploaded files, which are served above `htmlCache` and
+never reach it. Hand-rolled rather than adding `helmet`: three headers and a
+disable do not justify another dependency, and an unpinned security middleware
+is itself a supply-chain surface.
+
+**`Content-Security-Policy` is deliberately NOT set.** The pages carry inline
+`<style>` and inline wiring, so a useful policy needs nonces threaded through
+every template or those refactored out — and a CSP added blind, without a
+browser, silently breaks the editor. **It is the obvious next hardening step;
+do it with a browser open and test `/?edit=1` first.**
+
+### 14.3 What was probed and held
+
+Run against a live server with a real admin session:
+
+- **XSS through the new `place` field** — `<script>alert(1)</script>` and an
+  attribute break-out (`x" onmouseover="alert(1)`) both neutralised. `place` is
+  a TEXT slot, so it is stripped of tags on write and escaped on render.
+- **The `map` href sink** — `javascript:`, `JaVaScRiPt:`, `vbscript:`, `data:`,
+  leading-whitespace `javascript:`, plain `http:`, `https://google.com@evil.example/`
+  and `https://google.com.evil.example/` all refused. See §13.5.
+- **CSRF** — a save with no token and a save with a wrong token both refused.
+- **Auth** — a save with no session refused; `/admin` redirects when logged out.
+  Every admin write route (`/admin/content`, `/admin/content/reset`,
+  `/admin/upload`, `/admin/edit/exit`) is behind `requireAdminApi`.
+- **Registry boundary** — unknown keys, the removed `locB` keys, and a
+  `__proto__.polluted` key all refused, with no prototype pollution.
+- **Secrets** — `config/.env` and `config/.prod.env` are ignored, untracked,
+  and were **never committed in any branch's history**; `public/uploads/` is
+  ignored; no credential-shaped literals or connection strings in tracked files.
+
+`scripts/content-audit.js` and `scripts/merge-program.js` print the database
+**name and host** (never the user or password) before acting. That is a
+deliberate "which database am I about to write to" confirmation for a script
+that can touch production; keep it.
+
+### 14.4 Not addressed
+
+- **CSP** — see §14.2.
+- **No rate limit on `/admin/content`.** Login is limited (10 attempts, then a
+  DB lock) but the write endpoints are not. They need a valid session and CSRF
+  token, so this is only reachable by an authenticated admin; worth adding if
+  the admin surface ever widens.
+- **The mail path is untested against live SMTP** after the nodemailer major.
+
+## 15. Performance: images (2026-09-22)
+
+### 15.1 The problem
+
+The site shipped camera originals. `couple-1.JPG` was **4096x5120 — 21
+megapixels — 1023 KB**, and `couple-3.png` was a *photograph stored as PNG* at
+1364 KB. `public/img` totalled **21 MB**. Some hand-made WebP files were
+*larger* than the JPEGs they replaced (`couple-6.webp` 4.4 MB vs
+`couple-6.JPG` 3.5 MB), which is what encoding at quality 100 does.
+
+A guest on mobile data was downloading roughly twenty times more image than
+their screen could use.
+
+**The home page went from ~2590 KB to 423 KB — 84% less.** `public/img` went
+from 21 MB to 4.1 MB.
+
+### 15.2 `scripts/optimize-images.js`
+
+Rewrites everything under `public/img` **in place, keeping every filename**, so
+nothing referencing those paths has to change — templates, stylesheets and any
+image slot the couple has saved all keep working.
+
+```bash
+node scripts/optimize-images.js            # dry run
+node scripts/optimize-images.js --apply
+```
+
+Caps the long edge at 2000px, re-encodes (mozjpeg q82 / WebP q80 / PNG palette),
+and **never writes a file that would get bigger** — anything under a 5% saving
+is left alone, so a second run is close to a no-op.
+
+`.rotate()` runs before metadata is dropped. Without it, stripping EXIF turns
+every portrait phone photo on its side — the classic version of this bug.
+
+**The originals are recoverable from git history**, which is the only backup:
+
+```bash
+git checkout <commit-before-this> -- public/img
+```
+
+### 15.3 Image slot defaults now point at WebP
+
+`couple-3.png` was **82% of the home page's weight on its own** — 1061 KB even
+after optimisation, against 143 KB for the identical pixels as WebP. PNG cannot
+compress a photograph; the WebP was already sitting in `public/img/webp/`.
+
+Four defaults in `constants/content.slots.js` now point at their WebP twin
+(hero, mariage image, gift image, gift strip). Each twin was checked to have
+**identical dimensions** to the file it replaced. `give.image` already pointed
+at a WebP, so the pattern was established.
+
+This only changes what a slot falls back to **when the couple has not chosen
+their own photo**. Their overrides are untouched, and the JPEG/PNG originals
+are still in the repo and still reachable.
+
+### 15.4 Uploads are optimised on the way in
+
+`middlewares/optimizeUpload.js`, called from `POST /admin/upload`. A 3000x4000
+phone photo becomes a 2000px-capped WebP. Order matters:
+
+1. **Decode the header first.** A failure means "not an image", not
+   "optimisation failed" — see §15.5.
+2. `.rotate()` applies EXIF orientation, *then* the metadata is dropped.
+3. Resize to 2000px long edge, `withoutEnlargement` so a small image is never
+   blown up and made worse.
+4. WebP q80 with `smartSubsample`.
+5. Output carries **no metadata at all**. Partly size, mostly privacy: phone
+   photos carry GPS coordinates, and this is a public website that already
+   lists the couple's addresses on the programme.
+
+`limitInputPixels` is capped at 50MP as a decompression-bomb guard. If the
+re-encode comes out *bigger* than the source, the original is kept.
+
+A failure other than a decode failure **degrades rather than throws** — the
+original is served. Losing bandwidth beats telling the admin their upload
+failed.
+
+### 15.5 A bug this session's own test hid
+
+The first version fell back to the original file on **any** error. A test
+asserted a fake JPEG (`<html><script>alert(1)</script>` sent as `image/jpeg`)
+was rejected — and passed, because it checked for the string "evil" in the
+filename, and uploads get random names. **The file was in fact stored and
+served.**
+
+It was not exploitable: `express.static` set `Content-Type: image/jpeg` from
+the extension and the `nosniff` header (§14.2) stops the browser re-reading it
+as HTML. But the whole defence rested on one header.
+
+Now the decode is a **validation step**: multer's filter trusts the
+browser-declared MIME type, so a file of HTML named `.jpg` reaches the
+optimiser; sharp decodes every format that filter admits, so a decode failure
+means the bytes are not a picture. Such an upload is **deleted and refused with
+a 400**. Verified with both a fake JPEG and a fake GIF.
+
+**The lesson for the next session: an assertion that passes is not evidence
+until you have seen it fail.** That test would have passed against no
+implementation at all.
+
+### 15.6 Loading
+
+- **The hero is preloaded.** It is the LCP element but it is a CSS
+  `background-image` on `--ls-hero-image`, so the browser cannot discover it
+  until the stylesheet is fetched and parsed. `contentLocals.heroPreload` feeds
+  a `<link rel="preload" as="image" fetchpriority="high">` in the head, **only
+  on the home page** — the other pages have no hero and would download an image
+  they never show.
+- **`lazyLoad` now adds `decoding="async"` as well as `loading="lazy"`.** Lazy
+  decides when bytes are fetched; async decides whether decoding blocks the
+  main thread. On a page of large photos the second is what stops scrolling
+  stuttering. Both are skipped for an `<img>` that already declares `loading`,
+  so a future above-the-fold image can opt out with `loading="eager"` —
+  **lazy-loading the LCP element delays it**, which is the opposite of the point.
+- **`/uploads/*` is now `max-age=31536000, immutable`.** Filenames are unique
+  per upload, so the bytes at a given upload URL can never change — replacing a
+  photo produces a new URL. Repo images keep the shorter 1-day life because
+  their filenames are stable and a redeploy has to be able to take effect.
+
+### 15.7 What is NOT done
+
+- **No responsive `srcset`/multiple widths.** Every viewport gets the 2000px
+  version. The next real win, and it needs the templates to emit `<picture>`.
+- **No AVIF.** ~20% smaller again than WebP, but it needs a `<picture>`
+  fallback chain to be safe.
+- **Visual quality was never eyed.** q80/q82 at 2000px are standard
+  high-quality web settings and the dimensions were checked, but **nobody has
+  looked at the re-encoded photos**. Check the hero and the gift photo before
+  deploying; the originals are one `git checkout` away.
+- `sharp` is a **native dependency**. It ships prebuilt binaries per platform;
+  if the production host's Node or libc differs, `npm install` there must be
+  able to fetch or build them. Watch the first deploy.

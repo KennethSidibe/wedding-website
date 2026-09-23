@@ -202,6 +202,16 @@ const CONTENT_SLOTS = [
         default: '#ffffff'
     },
 
+    // Image defaults point at the WebP copy under /img/webp/ wherever one
+    // exists with identical dimensions. The PNG and JPEG originals are still
+    // in the repo and still reachable — this only changes what a slot falls
+    // back to when the couple has not chosen their own photo.
+    //
+    // /img/couple-3.png was the reason: a photograph stored as PNG, 1061 KB
+    // after optimisation against 143 KB for the same pixels as WebP, and on
+    // its own 82% of the home page's weight. PNG cannot compress a photograph;
+    // re-encoding it is the only fix, and the WebP was already sitting there.
+    //
     // ------------------------------------------------------- Home / hero
 
     {
@@ -209,7 +219,7 @@ const CONTENT_SLOTS = [
         type: SLOT_TYPE.IMAGE,
         label: 'Photo principale',
         cssVar: '--ls-hero-image',
-        default: '/img/main-img.jpg'
+        default: '/img/webp/main-img.webp'
     },
     {
         key: 'home.hero.date1',
@@ -274,7 +284,7 @@ const CONTENT_SLOTS = [
         key: 'home.mariage.image',
         type: SLOT_TYPE.IMAGE,
         label: 'Photo « Notre Mariage »',
-        default: '/img/couple-2.JPG'
+        default: '/img/webp/couple-2.webp'
     },
     {
         // The wide decorative strip under the "S'enregistrer" button. It used to
@@ -283,7 +293,7 @@ const CONTENT_SLOTS = [
         key: 'home.mariage.strip',
         type: SLOT_TYPE.IMAGE,
         label: 'Bandeau sous le bouton « S’enregistrer »',
-        default: '/img/main-img.jpg'
+        default: '/img/webp/main-img.webp'
     },
 
     // -------------------------------------------------------- Home / Cadeaux
@@ -311,7 +321,7 @@ const CONTENT_SLOTS = [
         key: 'home.gift.image',
         type: SLOT_TYPE.IMAGE,
         label: 'Photo « Cadeaux »',
-        default: '/img/couple-3.png'
+        default: '/img/webp/couple-3.webp'
     },
     {
         // Same story as home.mariage.strip — the strip under the "Cliquez sur
@@ -319,7 +329,7 @@ const CONTENT_SLOTS = [
         key: 'home.gift.strip',
         type: SLOT_TYPE.IMAGE,
         label: 'Bandeau sous le texte « Cadeaux »',
-        default: '/img/couple-1.JPG'
+        default: '/img/webp/couple-1.webp'
     },
     {
         key: 'home.gift.cta',

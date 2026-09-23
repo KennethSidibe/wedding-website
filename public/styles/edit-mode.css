@@ -1216,11 +1216,14 @@ html[data-theme="dark"] .ls-program-revert {
     box-shadow: 0 0 0 3px rgba(21, 128, 61, 0.32);
 }
 
-/* The right-hand entries' place line is right-aligned, and a wrapped pill
-   under a short place name should follow it rather than sit under the pin. */
-.program-place-line.text-end .ls-map-btn {
-    margin-left: auto;
-}
+/* No `margin-left: auto` on the pill for right-hand entries, however much it
+   looks like the way to right-align it. The line is already a flex container
+   with `justify-content: flex-end`; an auto margin on the last item absorbs
+   ALL the free space instead, which pins the place text to the far left and
+   the pill to the far right and splits the pair in half. The visitor view
+   hides the bug because it has no pill — nothing there to carry the margin.
+   justify-content alone keeps the two together at the right, and flex-wrap
+   still drops the pill onto its own right-aligned line when it needs to. */
 
 @media (max-width: 576px) {
     .ls-map-btn {

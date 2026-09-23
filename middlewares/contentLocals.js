@@ -125,6 +125,20 @@ export function contentLocals(req, res, next) {
 
     res.locals.hasOverride = hasOverride;
 
+    // The hero photo, for a <link rel="preload"> in the head.
+    //
+    // It is the largest thing on the page and therefore the LCP, but it is a
+    // CSS background on --ls-hero-image, so the browser cannot even discover
+    // it until the stylesheet has been fetched and parsed. Preloading starts
+    // the download with the HTML instead. `loading="lazy"` is irrelevant here
+    // — there is no <img> to put it on.
+    //
+    // Only on the page that actually has a hero, or the other pages would
+    // each download an image they never show.
+    res.locals.heroPreload = editPageKey === 'home'
+        ? getContentValue('home.hero.image')
+        : '';
+
     // The Programme timelines, one per ceremony. In edit mode the template
     // renders each whole pool and hides the entries past the count, so the
     // editor can reveal one without having to build markup in JavaScript —

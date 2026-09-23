@@ -79,6 +79,15 @@
     </style>
     <% } %>
 
+    <%
+      // Starts the hero download with the HTML rather than after the CSS has
+      // been fetched and parsed. It is a background-image, so the browser has
+      // no other way to find out about it early, and it is the LCP element.
+    %>
+    <% if (typeof heroPreload !== 'undefined' && heroPreload !== '') { %>
+    <link rel="preload" as="image" href="<%= heroPreload %>" fetchpriority="high" />
+    <% } %>
+
     <% if (typeof editMode !== 'undefined' && editMode) { %>
     <link rel="stylesheet" href="/styles/edit-mode.css" />
     <% } %>

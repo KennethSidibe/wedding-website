@@ -262,68 +262,49 @@
               </div>
               <% } %>
 
+              <%
+                // Where this step happens. It sits directly under the time,
+                // not under the description: the title, the time and the place
+                // are the three facts a guest scans for, and the description
+                // is the prose that follows them.
+                //
+                // Three renderings, not one, because the needs conflict: a
+                // visitor with a map link gets an <a>; a visitor without one
+                // gets plain text; and the admin gets neither, because a
+                // contenteditable inside an <a> is a trap — the first click
+                // navigates away instead of placing the caret. In edit mode
+                // the link is changed with the button beside the place, which
+                // is also the only affordance that can show a link that exists
+                // but has no visible text.
+                const placeKey = `${prefix}.place`;
+                const mapKey = `${prefix}.map`;
+                const hasPlace = slotHasValue(placeKey);
+                const hasMap = slotHasValue(mapKey);
+              %>
               <div class="mx-2 row<%= isLeft ? '' : ' justify-content-end' %>">
                 <div class="col-5">
                   <h4 class="<%= isLeft ? '' : 'text-end' %>"><%- slot(`${prefix}.title`) %></h4>
                   <% if (editMode || slotHasValue(`${prefix}.time`)) { %>
                   <p class="program-time <%= isLeft ? '' : 'text-end' %>"><%- slot(`${prefix}.time`) %></p>
                   <% } %>
-                </div>
-              </div>
-              <div class="mx-2 row<%= isLeft ? '' : ' justify-content-end' %>">
-                <div class="col-5">
-                  <p class="<%= isLeft ? '' : 'text-end' %>">
-                    <%- slot(`${prefix}.text`) %>
-                  </p>
 
-                  <%
-                    // Where this step happens, directly under its description.
-                    //
-                    // Three renderings, not one, because the needs conflict:
-                    // a visitor with a map link gets an <a>; a visitor without
-                    // one gets plain text; and the admin gets neither, because
-                    // a contenteditable inside an <a> is a trap — the first
-                    // click navigates away instead of placing the caret. In
-                    // edit mode the link is changed with the 🔗 button beside
-                    // the place, which is also the only affordance that can
-                    // show a link that exists but has no visible text.
-                    const placeKey = `${prefix}.place`;
-                    const mapKey = `${prefix}.map`;
-                    const hasPlace = slotHasValue(placeKey);
-                    const hasMap = slotHasValue(mapKey);
-                  %>
                   <% if (editMode || hasPlace) { %>
                   <p class="program-place-line <%= isLeft ? '' : 'text-end' %>">
                     <% if (editMode) { %>
+                      <%
+                        // Mirrored on the right-hand entries: left reads
+                        // "place, link" outward from the timeline, so right
+                        // has to read "link, place" or the pill ends up
+                        // furthest from the spine and the eye meets the
+                        // control before the thing it controls. Done in the
+                        // markup rather than with row-reverse so the DOM order
+                        // matches the reading order for a screen reader.
+                      %>
+                      <% if (!isLeft) { %><%- include('program-map-btn', { mapKey, hasMap }) %><% } %>
                       <span class="program-place">
                         <%- include('program-pin') %><%- slot(placeKey) %>
                       </span>
-                      <%
-                        // A labelled button, not an icon. An icon alone was
-                        // too easy to miss next to body copy, and it could not
-                        // say which of the two states it was in without the
-                        // admin hovering it for a tooltip. The label carries
-                        // the state in words; the tick and the colour repeat
-                        // it, so it does not depend on colour alone.
-                      %>
-                      <button
-                        type="button"
-                        class="ls-map-btn<%= hasMap ? ' has-link' : '' %>"
-                        data-map-slot="<%= mapKey %>"
-                        data-map-value="<%- slotUrl(mapKey) %>"
-                      >
-                        <span class="ls-map-btn-icon" aria-hidden="true">
-                          <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M8 16s6-5.686 6-10A6 6 0 0 0 2 6c0 4.314 6 10 6 10m0-7a3 3 0 1 1 0-6 3 3 0 0 1 0 6"/>
-                          </svg>
-                        </span>
-                        <span class="ls-map-btn-label"><%= hasMap ? 'Lien Maps ajouté' : 'Ajouter le lien Maps' %></span>
-                        <span class="ls-map-btn-tick" aria-hidden="true"<%= hasMap ? '' : ' hidden' %>>
-                          <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 16 16" fill="currentColor">
-                            <path d="M10.97 4.97a.75.75 0 0 1 1.07 1.05l-3.99 4.99a.75.75 0 0 1-1.08.02L4.324 8.384a.75.75 0 1 1 1.06-1.06l2.094 2.093 3.473-4.425z"/>
-                          </svg>
-                        </span>
-                      </button>
+                      <% if (isLeft) { %><%- include('program-map-btn', { mapKey, hasMap }) %><% } %>
                     <% } else if (hasMap) { %>
                       <a
                         class="program-place program-place-link"
@@ -336,6 +317,14 @@
                     <% } %>
                   </p>
                   <% } %>
+                </div>
+              </div>
+
+              <div class="mx-2 row<%= isLeft ? '' : ' justify-content-end' %>">
+                <div class="col-5">
+                  <p class="<%= isLeft ? '' : 'text-end' %>">
+                    <%- slot(`${prefix}.text`) %>
+                  </p>
                 </div>
               </div>
             </div>

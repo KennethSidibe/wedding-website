@@ -8,12 +8,15 @@ import { attemptAdminLogin, isAdminLoginLocked, LOGIN_RESULT } from "./controlle
 import { createAdminSession, destroyAdminSession, isAdminAuthenticated, requireAdmin, requireAdminApi,
   openEditorSession, closeEditorSession, isEditorSessionOpen } from "./middlewares/adminAuth.js";
 import { readFileSync } from 'fs';
+import { unlink } from 'fs/promises';
 import { cacheBusting } from "./middlewares/cacheBusting.js";
 import { staticCache } from "./middlewares/staticCache.js";
 import { lazyLoad } from "./middlewares/lazyLoad.js";
 import { htmlCache } from "./middlewares/htmlCache.js";
+import { securityHeaders } from "./middlewares/securityHeaders.js";
 import { contentLocals } from "./middlewares/contentLocals.js";
 import { uploadImage, UPLOAD_URL_PREFIX, MAX_UPLOAD_BYTES } from "./middlewares/uploadImage.js";
+import { optimizeUpload } from "./middlewares/optimizeUpload.js";
 import {
   initContentCache,
   saveContentUpdates,
@@ -32,6 +35,11 @@ const port = 8129;
 const publicPath = path.join(__dirName, "public");
 
 // Middleware
+
+// Before express.static on purpose: nosniff has to cover uploaded files too,
+// which are served below and never reach htmlCache.
+app.use(securityHeaders(app));
+
 app.use(lazyLoad);
 app.use(bodyParser.urlencoded({extended:true}));
 app.use(express.json());
@@ -289,7 +297,7 @@ app.post('/admin/content/reset', requireAdminApi, async(req, res) => {
 // live site when the admin presses Enregistrer.
 app.post('/admin/upload', requireAdminApi, (req, res) => {
 
-  uploadImage.single('photo')(req, res, (error) => {
+  uploadImage.single('photo')(req, res, async (error) => {
 
     if (error != null) {
       if (error.message === 'UNSUPPORTED_IMAGE_TYPE') {
@@ -312,6 +320,42 @@ app.post('/admin/upload', requireAdminApi, (req, res) => {
       return res.status(400).json({ ok: false, error: 'Aucune image reçue.' });
     }
 
-    res.json({ ok: true, url: `${UPLOAD_URL_PREFIX}/${req.file.filename}` });
+    // Shrink it before it is ever served. Done here rather than in multer's
+    // storage engine because it is async and multer's filename callback is
+    // not, and because a failure has to leave a usable upload rather than a
+    // failed one — see the catch.
+    let filename = req.file.filename;
+    try {
+      const result = await optimizeUpload(req.file.path);
+      filename = result.filename;
+
+      const saved = result.bytesBefore - result.bytesAfter;
+      if (saved > 0) {
+        console.log(
+          `Image optimised: ${Math.round(result.bytesBefore / 1024)} KB -> `
+          + `${Math.round(result.bytesAfter / 1024)} KB `
+          + `(-${Math.round((saved / result.bytesBefore) * 100)}%)`
+        );
+      }
+    } catch (optimizeError) {
+      // The bytes are not a picture, whatever the browser called them. Delete
+      // it rather than serve it: multer's filter trusts the declared MIME
+      // type, so this is the check that actually knows.
+      if (optimizeError.code === 'NOT_AN_IMAGE') {
+        await unlink(req.file.path).catch(() => {});
+        return res.status(400).json({
+          ok: false,
+          error: "Ce fichier n'est pas une image valide."
+        });
+      }
+
+      // A real photo that could not be re-encoded for some other reason is
+      // still a photo the admin just chose. Serving the original is worse for
+      // bandwidth but better than telling them their upload failed, so this
+      // degrades rather than throws.
+      console.error('Image optimisation failed, serving the original:', optimizeError.message);
+    }
+
+    res.json({ ok: true, url: `${UPLOAD_URL_PREFIX}/${filename}` });
   });
 });
